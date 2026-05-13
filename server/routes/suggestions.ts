@@ -34,11 +34,16 @@ router.post('/doctors/:id/suggestions', (req: Request, res: Response) => {
 
         // If not a delete suggestion, validate required fields
         if (!suggest_delete) {
-            if (!suggested_name?.trim() || !suggested_mobile?.trim() ||
-                !suggested_speciality?.trim() || !suggested_designation?.trim() ||
-                !suggested_qualification?.trim() || !suggested_pmdc?.trim() ||
-                !suggested_cnic?.trim()) {
-                return res.status(400).json({ error: 'All Doctor Info fields are required' });
+            const missing: string[] = [];
+            if (!suggested_name?.trim()) missing.push('Doctor Name');
+            if (!suggested_mobile?.trim()) missing.push('Mobile');
+            if (!suggested_speciality?.trim()) missing.push('Speciality');
+            if (!suggested_designation?.trim()) missing.push('Designation');
+            if (!suggested_qualification?.trim()) missing.push('Qualification');
+            if (!suggested_pmdc?.trim()) missing.push('PMDC Number');
+            if (!suggested_cnic?.trim()) missing.push('CNIC');
+            if (missing.length > 0) {
+                return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` });
             }
 
             // Validate PMDC against lookup (unless "Special Prescriber")

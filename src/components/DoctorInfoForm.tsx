@@ -79,6 +79,30 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side validation
+        if (!suggestDelete) {
+            const missing: string[] = [];
+            if (!name.trim()) missing.push('Doctor Name');
+            if (!mobile.trim()) missing.push('Mobile');
+            if (!speciality) missing.push('Speciality');
+            if (!designation) missing.push('Designation');
+            if (!qualification) missing.push('Qualification');
+            if (!pmdc.trim()) missing.push('PMDC Number');
+            if (!cnic.trim()) missing.push('CNIC');
+            if (missing.length > 0) {
+                onToast('error', `Please fill: ${missing.join(', ')}`);
+                return;
+            }
+            if (pmdcValid === false) {
+                onToast('error', 'PMDC number is invalid');
+                return;
+            }
+        } else if (!deleteReason.trim()) {
+            onToast('error', 'Please provide a reason for deletion');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const body: any = { session_id: session.session_id, suggest_delete: suggestDelete };

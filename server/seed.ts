@@ -69,10 +69,11 @@ function seedCityBrickMapping(force: boolean) {
         db.exec('DELETE FROM city_brick_mapping');
     }
 
-    console.log('Reading city-brick mapping from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['City-Brick Mapping (for DAS)'];
-    if (!sheet) { console.log('Sheet "City-Brick Mapping (for DAS)" not found — skipping.'); return; }
+    const LOCATION_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
+    console.log('Reading city-brick mapping from:', LOCATION_FILE);
+    const workbook = XLSX.readFile(LOCATION_FILE);
+    const sheet = workbook.Sheets['3S Mapping'];
+    if (!sheet) { console.log('Sheet "3S Mapping" not found — skipping.'); return; }
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} city-brick mapping records`);
@@ -109,8 +110,9 @@ function seedCitiesExpense(force: boolean) {
         db.exec('DELETE FROM cities_expense');
     }
 
-    console.log('Reading cities for expense from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
+    const LOCATION_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
+    console.log('Reading cities for expense from:', LOCATION_FILE);
+    const workbook = XLSX.readFile(LOCATION_FILE);
     const sheet = workbook.Sheets['Cities for Expense'];
     if (!sheet) { console.log('Sheet "Cities for Expense" not found — skipping.'); return; }
     const rows = XLSX.utils.sheet_to_json<any>(sheet);

@@ -114,7 +114,7 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                         <User className="w-7 h-7" />
                     </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
                     {[
                         ['City (DAS)', doctor.doctor_city_das],
                         ['Speciality', doctor.speciality],
@@ -123,13 +123,12 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                         ['Phone', doctor.mobile_number],
                         ['Distributor', doctor.distributor_name],
                     ].map(([label, value]) => (
-                        <div key={label} className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-                            <p className="text-sm font-medium text-slate-700 truncate">{value || 'N/A'}</p>
+                        <div key={label} className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+                            <p className="text-xs font-medium text-slate-700 truncate">{value || 'N/A'}</p>
                         </div>
                     ))}
                 </div>
-                {doctor.pmdc_number && <p className="mt-3 text-xs text-slate-400">PMDC# {doctor.pmdc_number}</p>}
             </div>
 
             {/* === ADMIN VIEW: Show suggestions === */}

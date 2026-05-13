@@ -214,14 +214,15 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
                 db.prepare("UPDATE doctors SET deleted_at = datetime('now') WHERE id = ?")
                     .run(suggestion.doctor_id);
             } else {
-                // Insert into doctors_finalized
+                // Insert into doctors_finalized — keep old PMDC, store new as pmdc_number_new
                 const finalData = overrides || {};
+                const originalDoctor = db.prepare('SELECT pmdc_number FROM doctors WHERE id = ?').get(suggestion.doctor_id) as any;
                 db.prepare(`
                     INSERT INTO doctors_finalized (
                         source_doctor_id, doctor_name, mobile_number,
                         speciality, designation, qualification,
-                        pmdc_number, cnic, finalized_by
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        pmdc_number, pmdc_number_new, cnic, finalized_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `).run(
                     suggestion.doctor_id,
                     finalData.doctor_name || suggestion.suggested_name,
@@ -229,6 +230,7 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
                     finalData.speciality || suggestion.suggested_speciality,
                     finalData.designation || suggestion.suggested_designation,
                     finalData.qualification || suggestion.suggested_qualification,
+                    originalDoctor?.pmdc_number || null,
                     finalData.pmdc_number || suggestion.suggested_pmdc,
                     finalData.cnic || suggestion.suggested_cnic,
                     reviewed_by.trim()
@@ -269,17 +271,7 @@ router.get('/dropdown-options', (req: Request, res: Response) => {
     }
 });
 
-// POST /api/admin/auth — Validate admin password
-router.post('/admin/auth', (req: Request, res: Response) => {
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'atco2024';
-    const { password } = req.body;
 
-    if (password === ADMIN_KEY) {
-        res.json({ success: true });
-    } else {
-        res.status(403).json({ error: 'Incorrect password' });
-    }
-});
 
 // GET /api/finalized — Get finalized records
 router.get('/finalized', (req: Request, res: Response) => {

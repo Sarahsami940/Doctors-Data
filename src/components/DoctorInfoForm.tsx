@@ -132,7 +132,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                 </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label className={labelCls}>Doctor Name <span className="text-red-500">*</span></label>
                             <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} required />
@@ -142,7 +142,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                             <input type="text" value={mobile} onChange={e => setMobile(e.target.value)} className={inputCls} required />
                         </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="relative">
                             <label className={labelCls}>Speciality <span className="text-red-500">*</span></label>
                             <select value={speciality} onChange={e => setSpeciality(e.target.value)} className={selectCls} required>
@@ -168,7 +168,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                             <ChevronDown className="pointer-events-none absolute right-2 bottom-2.5 w-3.5 h-3.5 text-slate-400" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label className={labelCls}>
                                 PMDC Number <span className="text-red-500">*</span>

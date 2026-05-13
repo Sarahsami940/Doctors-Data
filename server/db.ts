@@ -116,6 +116,7 @@ function initSchema(db: Database.Database) {
       designation TEXT,
       qualification TEXT,
       pmdc_number TEXT,
+      pmdc_number_new TEXT,
       cnic TEXT,
       finalized_by TEXT NOT NULL,
       finalized_at TEXT DEFAULT (datetime('now')),

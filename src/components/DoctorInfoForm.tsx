@@ -20,6 +20,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
     const [pmdc, setPmdc] = useState('');
     const [pmdcValid, setPmdcValid] = useState<boolean | null>(null);
     const [pmdcChecking, setPmdcChecking] = useState(false);
+    const [isSpecialPrescriber, setIsSpecialPrescriber] = useState(false);
     const [cnic, setCnic] = useState('');
     const [cnicLocked, setCnicLocked] = useState(false);
     const [changeReason, setChangeReason] = useState('');
@@ -196,14 +197,31 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                         <div>
                             <label className={labelCls}>
                                 PMDC Number <span className="text-red-500">*</span>
-                                {pmdcChecking && <Loader2 className="inline w-3 h-3 ml-1 animate-spin text-indigo-500" />}
-                                {pmdcValid === true && <span className="ml-1 text-green-500">✓</span>}
-                                {pmdcValid === false && <span className="ml-1 text-red-500">✗</span>}
+                                {!isSpecialPrescriber && pmdcChecking && <Loader2 className="inline w-3 h-3 ml-1 animate-spin text-indigo-500" />}
+                                {!isSpecialPrescriber && pmdcValid === true && <span className="ml-1 text-green-500">✓</span>}
+                                {!isSpecialPrescriber && pmdcValid === false && <span className="ml-1 text-red-500">✗</span>}
                             </label>
-                            <input type="text" value={pmdc} onChange={e => { setPmdc(e.target.value); setPmdcValid(null); }}
-                                className={`${inputCls} ${pmdcValid === false ? 'border-red-300 focus:ring-red-500/20' : ''}`}
-                                placeholder='e.g. 100022-P or "Special Prescriber"' required />
-                            {pmdcValid === false && <p className="text-[10px] text-red-500 mt-0.5">PMDC number not found</p>}
+                            <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer">
+                                <input type="checkbox" checked={isSpecialPrescriber} onChange={e => {
+                                    setIsSpecialPrescriber(e.target.checked);
+                                    if (e.target.checked) {
+                                        setPmdc('Special Prescriber');
+                                        setPmdcValid(true);
+                                        setPmdcChecking(false);
+                                    } else {
+                                        setPmdc('');
+                                        setPmdcValid(null);
+                                    }
+                                }} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                <span className="text-[10px] text-slate-500">Special Prescriber (no PMDC)</span>
+                            </label>
+                            <input type="text" value={pmdc}
+                                onChange={e => { setPmdc(e.target.value); setPmdcValid(null); }}
+                                className={`${inputCls} ${pmdcValid === false ? 'border-red-300 focus:ring-red-500/20' : ''} ${isSpecialPrescriber ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                                placeholder='e.g. 100022-P'
+                                disabled={isSpecialPrescriber}
+                                required />
+                            {!isSpecialPrescriber && pmdcValid === false && <p className="text-[10px] text-red-500 mt-0.5">PMDC number not found</p>}
                         </div>
                         <div>
                             <label className={labelCls}>CNIC <span className="text-red-500">*</span>{cnicLocked && <span className="ml-1 text-amber-500 normal-case">(locked)</span>}</label>

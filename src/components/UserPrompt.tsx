@@ -77,7 +77,7 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
                 team,
             };
 
-            sessionStorage.setItem('doctorDirSession', JSON.stringify(session));
+            localStorage.setItem('doctorDirSession', JSON.stringify(session));
             onSessionCreated(session);
         } catch (err) {
             setError('Network error. Please check your connection and try again.');

@@ -40,12 +40,12 @@ export default function App() {
 
   // Check for existing session
   useEffect(() => {
-    const stored = sessionStorage.getItem('doctorDirSession');
+    const stored = localStorage.getItem('doctorDirSession');
     if (stored) {
       try {
         setSession(JSON.parse(stored));
       } catch {
-        sessionStorage.removeItem('doctorDirSession');
+        localStorage.removeItem('doctorDirSession');
       }
     }
   }, []);
@@ -61,7 +61,7 @@ export default function App() {
   }, []);
 
   const handleSessionExpired = useCallback(() => {
-    sessionStorage.removeItem('doctorDirSession');
+    localStorage.removeItem('doctorDirSession');
     setSession(null);
     addToast('info', 'Your session has expired. Please enter your details again.');
   }, [addToast]);

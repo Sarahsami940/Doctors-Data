@@ -16,7 +16,7 @@ router.get('/', (req: Request, res: Response) => {
         const distributor = (req.query.distributor as string || '').trim();
         const search = (req.query.search as string || '').trim();
 
-        let conditions: string[] = [];
+        let conditions: string[] = ['deleted_at IS NULL'];
         let params: any[] = [];
 
         if (search) {
@@ -39,7 +39,7 @@ router.get('/', (req: Request, res: Response) => {
         if (city_das) { conditions.push('doctor_city_das LIKE ?'); params.push(`%${city_das}%`); }
         if (distributor) { conditions.push('distributor_name = ?'); params.push(distributor); }
 
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
         const totalDoctors = (db.prepare(`SELECT COUNT(*) as count FROM doctors ${whereClause}`).get(...params) as { count: number }).count;
 

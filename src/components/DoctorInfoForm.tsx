@@ -196,7 +196,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                             <ChevronDown className="pointer-events-none absolute right-2 bottom-2.5 w-3.5 h-3.5 text-slate-400" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:items-end">
                         <div>
                             <label className={labelCls}>
                                 PMDC Number <span className="text-red-500">*</span>
@@ -229,6 +229,8 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                         </div>
                         <div>
                             <label className={labelCls}>CNIC <span className="text-red-500">*</span>{cnicLocked && <span className="ml-1 text-amber-500 normal-case">(locked)</span>}</label>
+                            {/* Spacer to match PMDC checkbox height */}
+                            <div className="hidden sm:block h-[22px]" />
                             <input type="text" value={cnic} onChange={e => handleCnicChange(e.target.value)}
                                 className={inputCls} placeholder="12345-6789012-3" readOnly={cnicLocked}
                                 style={cnicLocked ? { backgroundColor: '#f8fafc', cursor: 'not-allowed' } : {}} required />

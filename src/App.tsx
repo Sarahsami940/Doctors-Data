@@ -147,8 +147,14 @@ export default function App() {
   useEffect(() => {
     fetchDoctors(emptyFilters, 'all');
     fetchStats();
-    fetchSuggestionCounts();
-  }, [fetchDoctors, fetchStats, fetchSuggestionCounts]);
+  }, [fetchDoctors, fetchStats]);
+
+  // Fetch suggestion counts whenever session changes (admin login)
+  useEffect(() => {
+    if (session?.role === 'Admin') {
+      fetchSuggestionCounts();
+    }
+  }, [session, fetchSuggestionCounts]);
 
   const handleSearch = useCallback((filters: SearchFilters) => {
     setCurrentFilters(filters);
@@ -197,13 +203,17 @@ export default function App() {
 
       <div className="flex flex-col md:flex-row h-screen">
         {/* Sidebar */}
-        <div className={`w-full md:w-[520px] lg:w-[600px] xl:w-[50%] border-r border-slate-200 bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-[520px] lg:w-[600px] xl:w-[50%] border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
-          <div className="px-5 pt-4 pb-2 border-b border-slate-100 space-y-3 shrink-0 bg-white">
+          <div className={`px-5 pt-4 pb-2 border-b space-y-3 shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-3">
                 <button onClick={handleLogoClick}
-                  className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0">
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 ${
+                    isAdmin
+                      ? 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20'
+                      : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/20'
+                  }`}>
                   <Stethoscope className="w-5 h-5 text-white" />
                 </button>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900">Doctor Directory</h1>
@@ -216,17 +226,23 @@ export default function App() {
               <div className="flex items-center gap-2">
                 {/* Admin view toggle */}
                 {session?.role === 'Admin' && (
-                  <button onClick={() => setAdminAppView(!adminAppView)}
-                    className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg border transition-all hover:bg-slate-50"
+                  <button onClick={() => { setAdminAppView(!adminAppView); setViewFinalized(false); setSelectedDoctorId(null); }}
+                    className={`flex items-center gap-1 text-[10px] font-medium px-2.5 py-1.5 rounded-lg border transition-all ${
+                      isAdmin
+                        ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
                     title={adminAppView ? 'Switch to Admin Panel' : 'Switch to App View'}>
                     <ArrowLeftRight className="w-3 h-3" />
                     {adminAppView ? 'Admin' : 'App'}
                   </button>
                 )}
                 {session && (
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100" title={`${session.name} (${session.role})`}>
-                    {isAdmin ? <Shield className="w-3.5 h-3.5 text-amber-500" /> : <User className="w-3.5 h-3.5 text-slate-400" />}
-                    <span className="text-xs text-slate-500 max-w-[80px] truncate">{session.name}</span>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
+                    isAdmin ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'
+                  }`} title={`${session.name} (${session.role})`}>
+                    {isAdmin ? <Shield className="w-3.5 h-3.5 text-amber-600" /> : <User className="w-3.5 h-3.5 text-slate-400" />}
+                    <span className={`text-xs max-w-[80px] truncate ${isAdmin ? 'text-amber-700' : 'text-slate-500'}`}>{session.name}</span>
                   </div>
                 )}
               </div>
@@ -237,11 +253,11 @@ export default function App() {
 
             {/* Admin: View Switcher */}
             {isAdmin && (
-              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 mt-1">
+              <div className="flex items-center gap-1 bg-amber-100/60 rounded-lg p-0.5 mt-1">
                 <button
                   onClick={() => { setViewFinalized(false); setSelectedDoctorId(null); }}
                   className={`flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-md transition-all ${
-                    !viewFinalized ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                    !viewFinalized ? 'bg-white shadow-sm text-amber-800' : 'text-amber-600 hover:text-amber-800'
                   }`}>
                   <Database className="w-3 h-3" /> Master Data
                 </button>
@@ -249,14 +265,13 @@ export default function App() {
                   onClick={() => {
                     setViewFinalized(true);
                     setSelectedDoctorId(null);
-                    // Fetch finalized records
                     setFinalizedLoading(true);
                     fetch('/api/finalized?limit=100').then(r => r.json()).then(data => {
                       setFinalizedRecords(data.records || []);
                     }).catch(() => {}).finally(() => setFinalizedLoading(false));
                   }}
                   className={`flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-md transition-all ${
-                    viewFinalized ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                    viewFinalized ? 'bg-white shadow-sm text-amber-800' : 'text-amber-600 hover:text-amber-800'
                   }`}>
                   <CheckCircle className="w-3 h-3" /> Finalized
                 </button>
@@ -272,7 +287,7 @@ export default function App() {
                 {finalizedLoading ? (
                   <div className="flex items-center justify-center py-20">
                     <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                       <p className="text-xs text-slate-500">Loading finalized records...</p>
                     </div>
                   </div>
@@ -320,6 +335,7 @@ export default function App() {
                 isLoading={isLoading}
                 isLoadingMore={isLoadingMore}
                 suggestionCounts={isAdmin ? suggestionCounts : undefined}
+                isAdmin={isAdmin}
               />
             )}
           </div>

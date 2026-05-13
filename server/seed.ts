@@ -210,6 +210,15 @@ function seedDropdownOptions(force: boolean) {
 
     insertMany();
 
+    // Add values that exist in doctor data but may be missing from Excel
+    const extras = [
+        ['designation', 'Family Physician'],
+        ['qualification', 'MATRIC'],
+    ];
+    for (const [cat, val] of extras) {
+        insert.run(cat, val);
+    }
+
     const finalCount = db.prepare('SELECT COUNT(*) as c FROM dropdown_options').get() as any;
     console.log(`Seeded ${finalCount.c} dropdown options`);
 }

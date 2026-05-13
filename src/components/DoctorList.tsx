@@ -11,6 +11,7 @@ type DoctorListProps = {
     isLoading: boolean;
     isLoadingMore: boolean;
     suggestionCounts?: Record<number, number>;
+    isAdmin?: boolean;
 };
 
 export default function DoctorList({
@@ -22,6 +23,7 @@ export default function DoctorList({
     isLoading,
     isLoadingMore,
     suggestionCounts,
+    isAdmin,
 }: DoctorListProps) {
     const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -96,7 +98,7 @@ export default function DoctorList({
                             onClick={() => onSelectDoctor(doctor.id)}
                             className={`flex items-center px-4 sm:px-6 py-3 cursor-pointer transition-all duration-150 group
                 ${selectedDoctorId === doctor.id
-                                    ? 'bg-indigo-50/70 border-l-3 border-l-indigo-500'
+                                    ? (isAdmin ? 'bg-amber-50/70 border-l-3 border-l-amber-500' : 'bg-indigo-50/70 border-l-3 border-l-indigo-500')
                                     : 'hover:bg-slate-50/80 border-l-3 border-l-transparent'
                                 }`}
                         >
@@ -127,7 +129,7 @@ export default function DoctorList({
                             <div className="hidden sm:block w-28 text-center shrink-0">
                                 <span className="text-xs text-slate-500 truncate block">{doctor.designation || '—'}</span>
                             </div>
-                            <ChevronRight className={`w-5 h-5 shrink-0 text-slate-300 transition-colors ${selectedDoctorId === doctor.id ? 'text-indigo-500' : 'group-hover:text-slate-400'
+                            <ChevronRight className={`w-5 h-5 shrink-0 text-slate-300 transition-colors ${selectedDoctorId === doctor.id ? (isAdmin ? 'text-amber-500' : 'text-indigo-500') : 'group-hover:text-slate-400'
                                 }`} />
                         </div>
                     );

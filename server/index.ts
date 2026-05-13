@@ -9,6 +9,7 @@ import sessionRoutes from './routes/sessions';
 import exportRoutes from './routes/export';
 import statsRoutes from './routes/stats';
 import adminRoutes from './routes/admin';
+import suggestionRoutes from './routes/suggestions';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +29,7 @@ app.use('/api/user-session', sessionRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', suggestionRoutes);
 
 // In production, serve the built frontend
 const distPath = path.join(__dirname, '..', 'dist');

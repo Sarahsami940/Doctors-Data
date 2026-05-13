@@ -7,7 +7,7 @@ import DashboardKpi from './components/DashboardKpi';
 import AdminDashboard from './components/AdminDashboard';
 import AdvancedSearch, { SearchFilters, emptyFilters } from './components/AdvancedSearch';
 import Toast from './components/Toast';
-import { User, Stethoscope } from 'lucide-react';
+import { User, Stethoscope, Shield, ArrowLeftRight } from 'lucide-react';
 import { DashboardStats } from './types';
 
 export default function App() {
@@ -28,8 +28,12 @@ export default function App() {
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>(emptyFilters);
   const [activeKpiFilter, setActiveKpiFilter] = useState<string>('all');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [adminAppView, setAdminAppView] = useState(false); // Admin viewing as normal app
+  const [suggestionCounts, setSuggestionCounts] = useState<Record<number, number>>({});
   const logoClickCount = useRef(0);
   const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const isAdmin = session?.role === 'Admin' && !adminAppView;
 
   // Check for existing session
   useEffect(() => {
@@ -53,12 +57,23 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Handle expired/invalid session - re-prompt user
   const handleSessionExpired = useCallback(() => {
     sessionStorage.removeItem('doctorDirSession');
     setSession(null);
     addToast('info', 'Your session has expired. Please enter your details again.');
   }, [addToast]);
+
+  // Fetch suggestion counts for admin
+  const fetchSuggestionCounts = useCallback(async () => {
+    if (!session || session.role !== 'Admin') return;
+    try {
+      const res = await fetch('/api/suggestions/pending/count');
+      const data = await res.json();
+      const map: Record<number, number> = {};
+      for (const row of data) map[row.doctor_id] = row.pending_count;
+      setSuggestionCounts(map);
+    } catch {}
+  }, [session]);
 
   // Fetch doctors
   const fetchDoctors = useCallback(async (filters: SearchFilters, kpi: string, page: number = 1, append: boolean = false) => {
@@ -129,10 +144,10 @@ export default function App() {
   useEffect(() => {
     fetchDoctors(emptyFilters, 'all');
     fetchStats();
-  }, [fetchDoctors, fetchStats]);
+    fetchSuggestionCounts();
+  }, [fetchDoctors, fetchStats, fetchSuggestionCounts]);
 
   const handleSearch = useCallback((filters: SearchFilters) => {
-    console.log('Searching with filters:', filters, 'and KPI:', activeKpiFilter);
     setCurrentFilters(filters);
     setSelectedDoctorId(null);
     fetchDoctors(filters, activeKpiFilter, 1, false);
@@ -140,7 +155,6 @@ export default function App() {
   }, [fetchDoctors, fetchStats, activeKpiFilter]);
 
   const handleKpiClick = useCallback((kpi: string) => {
-    console.log('KPI Clicked:', kpi, 'current filters:', currentFilters);
     setActiveKpiFilter(kpi);
     setSelectedDoctorId(null);
     fetchDoctors(currentFilters, kpi, 1, false);
@@ -154,15 +168,11 @@ export default function App() {
 
   const handleSelectDoctor = useCallback((id: number) => {
     setSelectedDoctorId(id);
-    // Push a history entry so browser back goes to list instead of leaving the app
     window.history.pushState({ doctorId: id }, '', `#doctor-${id}`);
   }, []);
 
-  // Listen for browser back button (popstate) to return to list
   useEffect(() => {
-    const handlePopState = () => {
-      setSelectedDoctorId(null);
-    };
+    const handlePopState = () => { setSelectedDoctorId(null); };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -170,9 +180,7 @@ export default function App() {
   const handleLogoClick = useCallback(() => {
     logoClickCount.current += 1;
     if (logoClickTimer.current) clearTimeout(logoClickTimer.current);
-    logoClickTimer.current = setTimeout(() => {
-      logoClickCount.current = 0;
-    }, 2000);
+    logoClickTimer.current = setTimeout(() => { logoClickCount.current = 0; }, 2000);
     if (logoClickCount.current >= 5) {
       logoClickCount.current = 0;
       window.open('/api/export/locations', '_blank');
@@ -182,30 +190,39 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* User Prompt Modal */}
       {!session && <UserPrompt onSessionCreated={setSession} />}
 
-      {/* Main Layout */}
       <div className="flex flex-col md:flex-row h-screen">
-        {/* Sidebar / List View */}
+        {/* Sidebar */}
         <div className={`w-full md:w-[520px] lg:w-[600px] xl:w-[50%] border-r border-slate-200 bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
-          {/* Header Area */}
+          {/* Header */}
           <div className="px-5 pt-4 pb-2 border-b border-slate-100 space-y-3 shrink-0 bg-white">
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleLogoClick}
-                  className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 hover:shadow-md hover:shadow-indigo-500/30 transition-all active:scale-95 cursor-pointer shrink-0"
-                  title="Doctor Directory"
-                >
+                <button onClick={handleLogoClick}
+                  className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-500/20 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0">
                   <Stethoscope className="w-5 h-5 text-white" />
                 </button>
                 <h1 className="text-lg font-bold tracking-tight text-slate-900">Doctor Directory</h1>
+                {isAdmin && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                    Admin
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
+                {/* Admin view toggle */}
+                {session?.role === 'Admin' && (
+                  <button onClick={() => setAdminAppView(!adminAppView)}
+                    className="flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-lg border transition-all hover:bg-slate-50"
+                    title={adminAppView ? 'Switch to Admin Panel' : 'Switch to App View'}>
+                    <ArrowLeftRight className="w-3 h-3" />
+                    {adminAppView ? 'Admin' : 'App'}
+                  </button>
+                )}
                 {session && (
                   <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100" title={`${session.name} (${session.role})`}>
-                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    {isAdmin ? <Shield className="w-3.5 h-3.5 text-amber-500" /> : <User className="w-3.5 h-3.5 text-slate-400" />}
                     <span className="text-xs text-slate-500 max-w-[80px] truncate">{session.name}</span>
                   </div>
                 )}
@@ -213,11 +230,10 @@ export default function App() {
             </div>
 
             <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
-
             <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
           </div>
 
-          {/* Doctor List - scrolls independently */}
+          {/* Doctor List */}
           <div className="flex-1 min-h-0 flex flex-col">
             <DoctorList
               doctors={doctors}
@@ -227,11 +243,12 @@ export default function App() {
               onLoadMore={handleLoadMore}
               isLoading={isLoading}
               isLoadingMore={isLoadingMore}
+              suggestionCounts={isAdmin ? suggestionCounts : undefined}
             />
           </div>
         </div>
 
-        {/* Detail View - scrolls independently, white background fills full height */}
+        {/* Detail View */}
         <div className={`flex-1 h-screen overflow-y-auto bg-white ${!selectedDoctorId ? 'hidden md:block' : 'block'}`}>
           {selectedDoctorId && session ? (
             <DoctorDetail
@@ -240,8 +257,13 @@ export default function App() {
               onBack={() => window.history.back()}
               onToast={addToast}
               onSessionExpired={handleSessionExpired}
-              onLocationAdded={() => {
+              onLocationAdded={() => { fetchStats(currentFilters); }}
+              isAdmin={isAdmin}
+              onDoctorDeleted={() => {
+                setSelectedDoctorId(null);
+                fetchDoctors(currentFilters, activeKpiFilter, 1, false);
                 fetchStats(currentFilters);
+                fetchSuggestionCounts();
               }}
             />
           ) : (
@@ -258,7 +280,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Toasts */}
       <Toast toasts={toasts} onRemove={removeToast} />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { UserSession, TEAMS, ROLES } from '../types';
 
 type UserPromptProps = {
@@ -10,8 +10,11 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
     const [employeeCode, setEmployeeCode] = useState('');
     const [role, setRole] = useState('');
     const [team, setTeam] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isAdmin = role === 'Admin';
 
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,8 +30,27 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
             return;
         }
 
+        if (isAdmin && !adminPassword) {
+            setError('Admin password is required');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
+            // If admin, validate password first
+            if (isAdmin) {
+                const authRes = await fetch('/api/admin/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPassword }),
+                });
+                if (!authRes.ok) {
+                    setError('Incorrect admin password');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             const res = await fetch('/api/user-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -62,7 +84,7 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
         } finally {
             setIsSubmitting(false);
         }
-    }, [name, employeeCode, role, team, onSessionCreated]);
+    }, [name, employeeCode, role, team, adminPassword, isAdmin, onSessionCreated]);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -121,7 +143,11 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
                         </label>
                         <select
                             value={role}
-                            onChange={e => setRole(e.target.value)}
+                            onChange={e => {
+                                setRole(e.target.value);
+                                setAdminPassword('');
+                                setError('');
+                            }}
                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all appearance-none"
                             required
                         >
@@ -131,6 +157,23 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
                             ))}
                         </select>
                     </div>
+
+                    {/* Admin Password — only shown when Admin role selected */}
+                    {isAdmin && (
+                        <div className="animate-fadeIn">
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                Admin Password <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                value={adminPassword}
+                                onChange={e => setAdminPassword(e.target.value)}
+                                placeholder="Enter admin password"
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-amber-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all"
+                                required
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">
@@ -152,7 +195,11 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                        className={`w-full py-3 font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-2 text-white ${
+                            isAdmin
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 shadow-amber-500/25'
+                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-500/25'
+                        }`}
                     >
                         {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
@@ -163,7 +210,7 @@ export default function UserPrompt({ onSessionCreated }: UserPromptProps) {
                                 Please wait...
                             </span>
                         ) : (
-                            'Continue to App'
+                            isAdmin ? 'Enter Admin Panel' : 'Continue to App'
                         )}
                     </button>
                 </form>

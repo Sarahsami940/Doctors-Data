@@ -75,4 +75,43 @@ export const TEAMS = [
     'Stallion', 'Steroid', 'Steroid - H', 'Terbiderm', 'Tiger', 'Trade Excellence', 'Vision'
 ];
 
-export const ROLES = ['TSM', 'DSM', 'RSM'];
+export const ROLES = ['TSM', 'DSM', 'RSM', 'Admin'];
+
+export type DoctorSuggestion = {
+    id: number;
+    doctor_id: number;
+    session_id: number;
+    employee_name: string;
+    employee_code: number;
+    team: string;
+    suggested_name: string | null;
+    suggested_mobile: string | null;
+    suggested_speciality: string | null;
+    suggested_designation: string | null;
+    suggested_qualification: string | null;
+    suggested_pmdc: string | null;
+    suggested_cnic: string | null;
+    suggest_delete: number;
+    delete_reason: string | null;
+    change_reason: string | null;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+    created_at: string;
+};
+
+export type FinalizedDoctor = {
+    id: number;
+    source_doctor_id: number;
+    doctor_name: string;
+    mobile_number: string;
+    speciality: string;
+    designation: string;
+    qualification: string;
+    pmdc_number: string;
+    cnic: string;
+    finalized_by: string;
+    finalized_at: string;
+    doctor_city_das?: string;
+    distributor_name?: string;
+};

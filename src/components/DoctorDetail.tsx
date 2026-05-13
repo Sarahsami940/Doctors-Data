@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { DoctorDetail as DoctorDetailType, LocationRecord, UserSession } from '../types';
-import { MapPin, Plus, User, ArrowLeft, MapPinned, Loader2 } from 'lucide-react';
+import { DoctorDetail as DoctorDetailType, LocationRecord, UserSession, DoctorSuggestion } from '../types';
+import { MapPin, Plus, User, ArrowLeft, MapPinned, Loader2, FileText, Check, X, Pencil, Trash2 } from 'lucide-react';
 import AddLocationForm from './AddLocationForm';
+import DoctorInfoForm from './DoctorInfoForm';
 
 type DoctorDetailProps = {
     doctorId: number;
@@ -10,12 +11,16 @@ type DoctorDetailProps = {
     onToast: (type: 'success' | 'error' | 'info', message: string) => void;
     onSessionExpired: () => void;
     onLocationAdded?: () => void;
+    isAdmin?: boolean;
+    onDoctorDeleted?: () => void;
 };
 
-export default function DoctorDetail({ doctorId, session, onBack, onToast, onSessionExpired, onLocationAdded }: DoctorDetailProps) {
+export default function DoctorDetail({ doctorId, session, onBack, onToast, onSessionExpired, onLocationAdded, isAdmin, onDoctorDeleted }: DoctorDetailProps) {
     const [doctor, setDoctor] = useState<DoctorDetailType | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddingLocation, setIsAddingLocation] = useState(false);
+    const [suggestions, setSuggestions] = useState<DoctorSuggestion[]>([]);
+    const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
     const fetchDoctor = async () => {
         try {
@@ -30,21 +35,46 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
         }
     };
 
+    const fetchSuggestions = async () => {
+        if (!isAdmin) return;
+        try {
+            const res = await fetch(`/api/doctors/${doctorId}/suggestions`);
+            const data = await res.json();
+            setSuggestions(data);
+        } catch {}
+    };
+
     useEffect(() => {
         setIsLoading(true);
         fetchDoctor();
+        fetchSuggestions();
     }, [doctorId]);
 
-    // Called by AddLocationForm with the new location returned by the API
     const handleLocationAdded = (newLocation: LocationRecord) => {
-        // Immediately append to local state — no round-trip needed
         setDoctor(prev => prev ? {
             ...prev,
             locations: [newLocation, ...(prev.locations || [])],
             location_count: (prev.location_count || 0) + 1
         } : prev);
         setIsAddingLocation(false);
-        if (onLocationAdded) onLocationAdded(); // Refresh KPI tiles on sidebar
+        if (onLocationAdded) onLocationAdded();
+    };
+
+    const handleSuggestionAction = async (suggestionId: number, status: 'approved' | 'rejected', overrides?: any) => {
+        try {
+            const res = await fetch(`/api/suggestions/${suggestionId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, reviewed_by: session.name, overrides })
+            });
+            if (!res.ok) { const d = await res.json(); onToast('error', d.error); return; }
+            onToast('success', `Suggestion ${status}`);
+            fetchSuggestions();
+            if (status === 'approved') {
+                const s = suggestions.find(s => s.id === suggestionId);
+                if (s?.suggest_delete && onDoctorDeleted) onDoctorDeleted();
+            }
+        } catch { onToast('error', 'Failed to update suggestion'); }
     };
 
     if (isLoading) {
@@ -66,58 +96,143 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
         );
     }
 
+    const pendingSuggestions = suggestions.filter(s => s.status === 'pending');
+    const pastSuggestions = suggestions.filter(s => s.status !== 'pending');
+
     return (
         <div className="p-5 sm:p-8 lg:p-10 w-full max-w-4xl mx-auto">
             {/* Mobile Back Button */}
-            <button
-                onClick={onBack}
-                className="md:hidden flex items-center text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors group"
-            >
-                <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
-                Back to list
+            <button onClick={onBack} className="md:hidden flex items-center text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors group">
+                <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" /> Back to list
             </button>
 
             {/* Doctor Header */}
-            <div className="border-b border-slate-200 pb-6 mb-6">
-                <div className="flex items-start justify-between mb-5">
+            <div className="border-b border-slate-200 pb-5 mb-6">
+                <div className="flex items-start justify-between mb-4">
                     <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">{doctor.doctor_name}</h2>
                     <div className="hidden sm:flex w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full items-center justify-center text-indigo-600 shrink-0 ml-4">
                         <User className="w-7 h-7" />
                     </div>
                 </div>
-
-                {/* Info Tiles */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">City (DAS)</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.doctor_city_das || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Speciality</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.speciality || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Qualification</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.qualification || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Designation</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.designation || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Phone</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.mobile_number || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Distributor</p>
-                        <p className="text-sm font-medium text-slate-700 truncate">{doctor.distributor_name || 'N/A'}</p>
+                    {[
+                        ['City (DAS)', doctor.doctor_city_das],
+                        ['Speciality', doctor.speciality],
+                        ['Qualification', doctor.qualification],
+                        ['Designation', doctor.designation],
+                        ['Phone', doctor.mobile_number],
+                        ['Distributor', doctor.distributor_name],
+                    ].map(([label, value]) => (
+                        <div key={label} className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 shadow-sm">
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+                            <p className="text-sm font-medium text-slate-700 truncate">{value || 'N/A'}</p>
+                        </div>
+                    ))}
+                </div>
+                {doctor.pmdc_number && <p className="mt-3 text-xs text-slate-400">PMDC# {doctor.pmdc_number}</p>}
+            </div>
+
+            {/* === ADMIN VIEW: Show suggestions === */}
+            {isAdmin && (
+                <div className="mb-8">
+                    <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2 mb-4">
+                        <FileText className="w-5 h-5 text-amber-500" /> Received Suggestions
+                        {pendingSuggestions.length > 0 && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{pendingSuggestions.length} pending</span>
+                        )}
+                    </h3>
+
+                    {pendingSuggestions.length === 0 && pastSuggestions.length === 0 && (
+                        <div className="text-center py-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
+                            <p className="text-sm text-slate-500">No suggestions received yet</p>
+                        </div>
+                    )}
+
+                    {pendingSuggestions.map(s => (
+                        <div key={s.id} className={`mb-3 p-4 rounded-xl border ${s.suggest_delete ? 'bg-red-50/50 border-red-200' : 'bg-amber-50/50 border-amber-200'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <span className="text-xs font-semibold text-slate-700">{s.employee_name}</span>
+                                    <span className="text-[10px] text-slate-400 ml-2">{s.team} · {new Date(s.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>
+                            </div>
+
+                            {s.suggest_delete ? (
+                                <div>
+                                    <p className="text-sm text-red-700 font-medium mb-1">⚠ Deletion Request</p>
+                                    <p className="text-xs text-red-600">Reason: {s.delete_reason}</p>
+                                    <div className="flex gap-2 mt-3">
+                                        {deleteConfirm === s.id ? (
+                                            <div className="flex items-center gap-2 bg-red-100 px-3 py-2 rounded-lg">
+                                                <p className="text-xs text-red-700 font-medium">Delete {doctor.doctor_name}?</p>
+                                                <button onClick={() => handleSuggestionAction(s.id, 'approved')} className="text-xs px-2 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700">Confirm</button>
+                                                <button onClick={() => setDeleteConfirm(null)} className="text-xs px-2 py-1 bg-white text-slate-600 rounded font-medium border hover:bg-slate-50">Cancel</button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button onClick={() => setDeleteConfirm(s.id)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all">
+                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                </button>
+                                                <button onClick={() => handleSuggestionAction(s.id, 'rejected')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white text-slate-600 rounded-lg font-medium border hover:bg-slate-50 transition-all">
+                                                    <X className="w-3 h-3" /> Reject
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                        {[
+                                            ['Name', s.suggested_name], ['Mobile', s.suggested_mobile],
+                                            ['Speciality', s.suggested_speciality], ['Designation', s.suggested_designation],
+                                            ['Qualification', s.suggested_qualification], ['PMDC', s.suggested_pmdc],
+                                            ['CNIC', s.suggested_cnic],
+                                        ].map(([label, val]) => val && (
+                                            <div key={label} className="py-0.5"><span className="text-slate-400">{label}:</span> <span className="text-slate-700 font-medium">{val}</span></div>
+                                        ))}
+                                    </div>
+                                    {s.change_reason && <p className="text-[10px] text-slate-500 mt-2 italic">Reason: {s.change_reason}</p>}
+                                    <div className="flex gap-2 mt-3">
+                                        <button onClick={() => handleSuggestionAction(s.id, 'approved')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all">
+                                            <Check className="w-3 h-3" /> Approve
+                                        </button>
+                                        <button onClick={() => handleSuggestionAction(s.id, 'rejected')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white text-slate-600 rounded-lg font-medium border hover:bg-slate-50 transition-all">
+                                            <X className="w-3 h-3" /> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {pastSuggestions.length > 0 && (
+                        <details className="mt-2">
+                            <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">Past suggestions ({pastSuggestions.length})</summary>
+                            {pastSuggestions.map(s => (
+                                <div key={s.id} className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-500">
+                                    <span className={`font-bold uppercase text-[10px] ${s.status === 'approved' ? 'text-green-600' : 'text-red-500'}`}>{s.status}</span>
+                                    <span className="ml-2">{s.employee_name} — {s.suggest_delete ? 'Deletion request' : 'Info update'}</span>
+                                    <span className="ml-2 text-slate-400">reviewed by {s.reviewed_by}</span>
+                                </div>
+                            ))}
+                        </details>
+                    )}
+                </div>
+            )}
+
+            {/* === TSM VIEW: Doctor Info Form === */}
+            {!isAdmin && (
+                <div className="mb-8">
+                    <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2 mb-4">
+                        <FileText className="w-5 h-5 text-indigo-400" /> Doctor Info
+                    </h3>
+                    <div className="bg-slate-50/50 rounded-xl border border-slate-200 p-5">
+                        <DoctorInfoForm doctorId={doctorId} doctor={doctor} session={session} onToast={onToast} />
                     </div>
                 </div>
-
-                {doctor.pmdc_number && (
-                    <p className="mt-3 text-xs text-slate-400">PMDC# {doctor.pmdc_number}</p>
-                )}
-            </div>
+            )}
 
             {/* Locations Section */}
             <div>
@@ -126,37 +241,24 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                         <MapPin className="w-5 h-5 text-indigo-400" />
                         Associated Locations
                         {doctor.locations && doctor.locations.length > 0 && (
-                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
-                                {doctor.locations.length}
-                            </span>
+                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{doctor.locations.length}</span>
                         )}
                     </h3>
-                    {!isAddingLocation && (
-                        <button
-                            onClick={() => setIsAddingLocation(true)}
-                            className="flex items-center text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-5 py-2.5 rounded-xl gap-2 shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/30 transition-all active:scale-95"
-                        >
-                            <Plus className="w-4.5 h-4.5" />
-                            Add Location
+                    {!isAddingLocation && !isAdmin && (
+                        <button onClick={() => setIsAddingLocation(true)}
+                            className="flex items-center text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-5 py-2.5 rounded-xl gap-2 shadow-md shadow-indigo-500/25 transition-all active:scale-95">
+                            <Plus className="w-4.5 h-4.5" /> Add Location
                         </button>
                     )}
                 </div>
 
-                {/* Add Location Form */}
                 {isAddingLocation && (
                     <div className="mb-6 animate-fadeIn">
-                        <AddLocationForm
-                            doctorId={doctor.id}
-                            sessionId={session.session_id}
-                            onLocationAdded={handleLocationAdded}
-                            onCancel={() => setIsAddingLocation(false)}
-                            onToast={onToast}
-                            onSessionExpired={onSessionExpired}
-                        />
+                        <AddLocationForm doctorId={doctor.id} sessionId={session.session_id} onLocationAdded={handleLocationAdded}
+                            onCancel={() => setIsAddingLocation(false)} onToast={onToast} onSessionExpired={onSessionExpired} />
                     </div>
                 )}
 
-                {/* Locations Table */}
                 {doctor.locations && doctor.locations.length > 0 ? (
                     <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="overflow-x-auto">
@@ -189,12 +291,12 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                         <div className="text-center py-12 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
                             <MapPinned className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                             <p className="text-sm text-slate-500 mb-1">No locations added yet.</p>
-                            <button
-                                onClick={() => setIsAddingLocation(true)}
-                                className="mt-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-5 py-2.5 rounded-xl shadow-md shadow-indigo-500/25 hover:shadow-lg transition-all active:scale-95"
-                            >
-                                Add the first location
-                            </button>
+                            {!isAdmin && (
+                                <button onClick={() => setIsAddingLocation(true)}
+                                    className="mt-3 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95">
+                                    Add the first location
+                                </button>
+                            )}
                         </div>
                     )
                 )}

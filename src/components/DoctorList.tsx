@@ -10,6 +10,7 @@ type DoctorListProps = {
     onLoadMore: () => void;
     isLoading: boolean;
     isLoadingMore: boolean;
+    suggestionCounts?: Record<number, number>;
 };
 
 export default function DoctorList({
@@ -20,6 +21,7 @@ export default function DoctorList({
     onLoadMore,
     isLoading,
     isLoadingMore,
+    suggestionCounts,
 }: DoctorListProps) {
     const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -110,6 +112,11 @@ export default function DoctorList({
                                         <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0">
                                             <MapPin className="w-2.5 h-2.5" />
                                             {doctor.location_count}
+                                        </span>
+                                    )}
+                                    {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
+                                        <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border border-amber-200">
+                                            {suggestionCounts[doctor.id]}
                                         </span>
                                     )}
                                 </div>

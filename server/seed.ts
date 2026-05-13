@@ -133,6 +133,87 @@ function seedCitiesExpense(force: boolean) {
     console.log(`Seeded expense cities`);
 }
 
+function seedPmdcLookup(force: boolean) {
+    const db = getDb();
+    const PMDC_FILE = path.join(DATA_DIR, 'PMDC Lookup.xlsx');
+
+    const existingCount = db.prepare('SELECT COUNT(*) as c FROM pmdc_lookup').get() as any;
+    if (existingCount.c > 0 && !force) {
+        console.log(`PMDC lookup already has ${existingCount.c} records. Skipping.`);
+        return;
+    }
+
+    if (force) {
+        console.log('Force mode: clearing pmdc_lookup table...');
+        db.exec('DELETE FROM pmdc_lookup');
+    }
+
+    console.log('Reading PMDC lookup from:', PMDC_FILE);
+    const workbook = XLSX.readFile(PMDC_FILE);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) throw new Error('No sheet found in PMDC Lookup file');
+    const rows = XLSX.utils.sheet_to_json<any>(sheet);
+
+    console.log(`Found ${rows.length} PMDC records`);
+
+    const insert = db.prepare(`INSERT OR IGNORE INTO pmdc_lookup (pmdc_number, doctor_name) VALUES (?, ?)`);
+
+    const insertMany = db.transaction((records: any[]) => {
+        for (const row of records) {
+            const regNo = (row['RegistrationNo'] || '').toString().trim();
+            const name = (row['Name'] || '').toString().trim();
+            if (regNo && name) insert.run(regNo, name);
+        }
+    });
+
+    insertMany(rows);
+    console.log(`Seeded PMDC lookup`);
+}
+
+function seedDropdownOptions(force: boolean) {
+    const db = getDb();
+    const DROPDOWN_FILE = path.join(DATA_DIR, 'Dropdowns.xlsx');
+
+    const existingCount = db.prepare('SELECT COUNT(*) as c FROM dropdown_options').get() as any;
+    if (existingCount.c > 0 && !force) {
+        console.log(`Dropdown options already has ${existingCount.c} records. Skipping.`);
+        return;
+    }
+
+    if (force) {
+        console.log('Force mode: clearing dropdown_options table...');
+        db.exec('DELETE FROM dropdown_options');
+    }
+
+    console.log('Reading dropdown options from:', DROPDOWN_FILE);
+    const workbook = XLSX.readFile(DROPDOWN_FILE);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) throw new Error('No sheet found in Dropdowns file');
+    const rows = XLSX.utils.sheet_to_json<any>(sheet, { header: 1 });
+
+    const headers = rows[0] as string[];
+    const dataRows = rows.slice(1);
+
+    const insert = db.prepare(`INSERT OR IGNORE INTO dropdown_options (category, value) VALUES (?, ?)`);
+
+    const insertMany = db.transaction(() => {
+        for (const row of dataRows) {
+            for (let i = 0; i < headers.length; i++) {
+                const category = (headers[i] || '').trim().toLowerCase();
+                const value = ((row as any[])[i] || '').toString().trim();
+                if (category && value) {
+                    insert.run(category, value);
+                }
+            }
+        }
+    });
+
+    insertMany();
+
+    const finalCount = db.prepare('SELECT COUNT(*) as c FROM dropdown_options').get() as any;
+    console.log(`Seeded ${finalCount.c} dropdown options`);
+}
+
 function main() {
     const force = process.argv.includes('--force');
     console.log(`Starting database seed...${force ? ' (FORCE MODE — will replace existing data)' : ''}\n`);
@@ -142,6 +223,10 @@ function main() {
         seedCityBrickMapping(force);
         console.log('');
         seedCitiesExpense(force);
+        console.log('');
+        seedPmdcLookup(force);
+        console.log('');
+        seedDropdownOptions(force);
         console.log('\nSeed completed successfully!');
     } catch (error) {
         console.error('Seed failed:', error);
@@ -152,3 +237,4 @@ function main() {
 }
 
 main();
+

@@ -1,0 +1,22 @@
+{
+    "name": "doctor-directory",
+    "version": "1.0.0",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "start": "npx tsx server/index.ts",
+        "seed": "npx tsx server/seed.ts"
+    },
+    "dependencies": {
+        "better-sqlite3": "^11.8.1",
+        "cors": "^2.8.5",
+        "express": "^4.21.2",
+        "xlsx": "^0.18.5"
+    },
+    "devDependencies": {
+        "tsx": "^4.19.2",
+        "@types/better-sqlite3": "^7.6.12",
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0"
+    }
+}

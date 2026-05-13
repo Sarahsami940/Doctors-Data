@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.db
+*.db-shm
+*.db-wal
+.env
+publish/node_modules/
+publish/dist/
+publish/*.db
+publish/*.db-shm
+publish/*.db-wal
+data/

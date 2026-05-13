@@ -25,8 +25,8 @@ function seedDoctors(force: boolean) {
 
     console.log('Reading doctor master data from:', EXCEL_FILE);
     const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['Doctors Master Data'];
-    if (!sheet) throw new Error('Sheet "Doctors Master Data" not found in Excel file');
+    const sheet = workbook.Sheets['Doctors Master Data'] || workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) throw new Error('No valid sheet found in Excel file');
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} doctor records`);
@@ -72,7 +72,7 @@ function seedCityBrickMapping(force: boolean) {
     console.log('Reading city-brick mapping from:', EXCEL_FILE);
     const workbook = XLSX.readFile(EXCEL_FILE);
     const sheet = workbook.Sheets['City-Brick Mapping (for DAS)'];
-    if (!sheet) throw new Error('Sheet "City-Brick Mapping (for DAS)" not found in Excel file');
+    if (!sheet) { console.log('Sheet "City-Brick Mapping (for DAS)" not found — skipping.'); return; }
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} city-brick mapping records`);
@@ -112,7 +112,7 @@ function seedCitiesExpense(force: boolean) {
     console.log('Reading cities for expense from:', EXCEL_FILE);
     const workbook = XLSX.readFile(EXCEL_FILE);
     const sheet = workbook.Sheets['Cities for Expense'];
-    if (!sheet) throw new Error('Sheet "Cities for Expense" not found in Excel file');
+    if (!sheet) { console.log('Sheet "Cities for Expense" not found — skipping.'); return; }
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} expense city records`);

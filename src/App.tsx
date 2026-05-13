@@ -7,7 +7,7 @@ import DashboardKpi from './components/DashboardKpi';
 import AdminDashboard from './components/AdminDashboard';
 import AdvancedSearch, { SearchFilters, emptyFilters } from './components/AdvancedSearch';
 import Toast from './components/Toast';
-import { User, Stethoscope, Shield, ArrowLeftRight } from 'lucide-react';
+import { User, Stethoscope, Shield, ArrowLeftRight, Database, CheckCircle } from 'lucide-react';
 import { DashboardStats } from './types';
 
 export default function App() {
@@ -30,6 +30,9 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [adminAppView, setAdminAppView] = useState(false); // Admin viewing as normal app
   const [suggestionCounts, setSuggestionCounts] = useState<Record<number, number>>({});
+  const [viewFinalized, setViewFinalized] = useState(false); // Admin: toggle Master Data vs Finalized
+  const [finalizedRecords, setFinalizedRecords] = useState<any[]>([]);
+  const [finalizedLoading, setFinalizedLoading] = useState(false);
   const logoClickCount = useRef(0);
   const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -231,20 +234,94 @@ export default function App() {
 
             <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
             <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+
+            {/* Admin: View Switcher */}
+            {isAdmin && (
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 mt-1">
+                <button
+                  onClick={() => { setViewFinalized(false); setSelectedDoctorId(null); }}
+                  className={`flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-md transition-all ${
+                    !viewFinalized ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                  }`}>
+                  <Database className="w-3 h-3" /> Master Data
+                </button>
+                <button
+                  onClick={() => {
+                    setViewFinalized(true);
+                    setSelectedDoctorId(null);
+                    // Fetch finalized records
+                    setFinalizedLoading(true);
+                    fetch('/api/finalized?limit=100').then(r => r.json()).then(data => {
+                      setFinalizedRecords(data.records || []);
+                    }).catch(() => {}).finally(() => setFinalizedLoading(false));
+                  }}
+                  className={`flex items-center gap-1 text-[11px] font-medium px-3 py-1.5 rounded-md transition-all ${
+                    viewFinalized ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'
+                  }`}>
+                  <CheckCircle className="w-3 h-3" /> Finalized
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Doctor List */}
           <div className="flex-1 min-h-0 flex flex-col">
-            <DoctorList
-              doctors={doctors}
-              selectedDoctorId={selectedDoctorId}
-              onSelectDoctor={handleSelectDoctor}
-              pagination={pagination}
-              onLoadMore={handleLoadMore}
-              isLoading={isLoading}
-              isLoadingMore={isLoadingMore}
-              suggestionCounts={isAdmin ? suggestionCounts : undefined}
-            />
+            {isAdmin && viewFinalized ? (
+              /* Finalized Records List */
+              <div className="flex-1 overflow-y-auto">
+                {finalizedLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-xs text-slate-500">Loading finalized records...</p>
+                    </div>
+                  </div>
+                ) : finalizedRecords.length === 0 ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <CheckCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                      <p className="text-sm text-slate-500">No finalized records yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Approved suggestions will appear here</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {finalizedRecords.map((rec: any) => (
+                      <div key={rec.id} className="px-4 sm:px-6 py-3 hover:bg-slate-50/80 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{rec.doctor_name}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {rec.speciality} · {rec.designation} · {rec.qualification}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400">by {rec.finalized_by}</p>
+                            <p className="text-[10px] text-slate-400">{new Date(rec.finalized_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-4 mt-1 text-[10px] text-slate-400">
+                          <span>PMDC (old): {rec.pmdc_number || '—'}</span>
+                          <span>PMDC (new): {rec.pmdc_number_new || '—'}</span>
+                          <span>CNIC: {rec.cnic || '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <DoctorList
+                doctors={doctors}
+                selectedDoctorId={selectedDoctorId}
+                onSelectDoctor={handleSelectDoctor}
+                pagination={pagination}
+                onLoadMore={handleLoadMore}
+                isLoading={isLoading}
+                isLoadingMore={isLoadingMore}
+                suggestionCounts={isAdmin ? suggestionCounts : undefined}
+              />
+            )}
           </div>
         </div>
 

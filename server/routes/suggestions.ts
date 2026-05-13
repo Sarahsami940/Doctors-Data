@@ -214,32 +214,83 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
         `).run(status, reviewed_by.trim(), suggestionId);
 
         if (status === 'approved') {
+            const originalDoctor = db.prepare('SELECT * FROM doctors WHERE id = ?').get(suggestion.doctor_id) as any;
+
             if (suggestion.suggest_delete) {
                 // Soft delete the doctor
                 db.prepare("UPDATE doctors SET deleted_at = datetime('now') WHERE id = ?")
                     .run(suggestion.doctor_id);
+
+                // Also record in finalized as deleted
+                const existing = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ?').get(suggestion.doctor_id) as any;
+                if (existing) {
+                    db.prepare(`
+                        UPDATE doctors_finalized SET is_deleted = 1, finalized_by = ?, finalized_at = datetime('now')
+                        WHERE source_doctor_id = ?
+                    `).run(reviewed_by.trim(), suggestion.doctor_id);
+                } else {
+                    db.prepare(`
+                        INSERT INTO doctors_finalized (
+                            source_doctor_id, doctor_name, mobile_number,
+                            speciality, designation, qualification,
+                            pmdc_number, pmdc_number_new, cnic, finalized_by, is_deleted
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    `).run(
+                        suggestion.doctor_id,
+                        originalDoctor?.doctor_name || 'Unknown',
+                        originalDoctor?.mobile_number || null,
+                        originalDoctor?.speciality || null,
+                        originalDoctor?.designation || null,
+                        originalDoctor?.qualification || null,
+                        originalDoctor?.pmdc_number || null,
+                        null,
+                        null,
+                        reviewed_by.trim()
+                    );
+                }
             } else {
-                // Insert into doctors_finalized — keep old PMDC, store new as pmdc_number_new
+                // UPSERT into doctors_finalized — update if exists, insert if not
                 const finalData = overrides || {};
-                const originalDoctor = db.prepare('SELECT pmdc_number FROM doctors WHERE id = ?').get(suggestion.doctor_id) as any;
-                db.prepare(`
-                    INSERT INTO doctors_finalized (
-                        source_doctor_id, doctor_name, mobile_number,
-                        speciality, designation, qualification,
-                        pmdc_number, pmdc_number_new, cnic, finalized_by
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `).run(
-                    suggestion.doctor_id,
-                    finalData.doctor_name || suggestion.suggested_name,
-                    finalData.mobile_number || suggestion.suggested_mobile,
-                    finalData.speciality || suggestion.suggested_speciality,
-                    finalData.designation || suggestion.suggested_designation,
-                    finalData.qualification || suggestion.suggested_qualification,
-                    originalDoctor?.pmdc_number || null,
-                    finalData.pmdc_number || suggestion.suggested_pmdc,
-                    finalData.cnic || suggestion.suggested_cnic,
-                    reviewed_by.trim()
-                );
+                const existing = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ?').get(suggestion.doctor_id) as any;
+
+                const vals = {
+                    name: finalData.doctor_name || suggestion.suggested_name,
+                    mobile: finalData.mobile_number || suggestion.suggested_mobile,
+                    speciality: finalData.speciality || suggestion.suggested_speciality,
+                    designation: finalData.designation || suggestion.suggested_designation,
+                    qualification: finalData.qualification || suggestion.suggested_qualification,
+                    pmdc_old: originalDoctor?.pmdc_number || null,
+                    pmdc_new: finalData.pmdc_number || suggestion.suggested_pmdc,
+                    cnic: finalData.cnic || suggestion.suggested_cnic,
+                };
+
+                if (existing) {
+                    db.prepare(`
+                        UPDATE doctors_finalized SET
+                            doctor_name = ?, mobile_number = ?,
+                            speciality = ?, designation = ?, qualification = ?,
+                            pmdc_number = ?, pmdc_number_new = ?, cnic = ?,
+                            finalized_by = ?, finalized_at = datetime('now'), is_deleted = 0
+                        WHERE source_doctor_id = ?
+                    `).run(
+                        vals.name, vals.mobile, vals.speciality, vals.designation, vals.qualification,
+                        vals.pmdc_old, vals.pmdc_new, vals.cnic,
+                        reviewed_by.trim(), suggestion.doctor_id
+                    );
+                } else {
+                    db.prepare(`
+                        INSERT INTO doctors_finalized (
+                            source_doctor_id, doctor_name, mobile_number,
+                            speciality, designation, qualification,
+                            pmdc_number, pmdc_number_new, cnic, finalized_by
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `).run(
+                        suggestion.doctor_id,
+                        vals.name, vals.mobile, vals.speciality, vals.designation, vals.qualification,
+                        vals.pmdc_old, vals.pmdc_new, vals.cnic,
+                        reviewed_by.trim()
+                    );
+                }
             }
         }
 
@@ -278,7 +329,7 @@ router.get('/dropdown-options', (req: Request, res: Response) => {
 
 
 
-// GET /api/finalized — Get finalized records
+// GET /api/finalized — Get finalized records with location counts
 router.get('/finalized', (req: Request, res: Response) => {
     try {
         const db = getDb();
@@ -288,7 +339,8 @@ router.get('/finalized', (req: Request, res: Response) => {
 
         const total = (db.prepare('SELECT COUNT(*) as c FROM doctors_finalized').get() as any).c;
         const records = db.prepare(`
-            SELECT df.*, d.doctor_city_das, d.distributor_name
+            SELECT df.*, d.doctor_city_das, d.distributor_name,
+                   (SELECT COUNT(*) FROM locations l WHERE l.doctor_id = df.source_doctor_id) as location_count
             FROM doctors_finalized df
             JOIN doctors d ON d.id = df.source_doctor_id
             ORDER BY df.finalized_at DESC

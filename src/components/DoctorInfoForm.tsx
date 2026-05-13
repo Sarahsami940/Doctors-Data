@@ -20,6 +20,7 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
     const [pmdc, setPmdc] = useState('');
     const [pmdcValid, setPmdcValid] = useState<boolean | null>(null);
     const [pmdcChecking, setPmdcChecking] = useState(false);
+    const [pmdcMatchedName, setPmdcMatchedName] = useState<string | null>(null);
     const [isSpecialPrescriber, setIsSpecialPrescriber] = useState(false);
     const [cnic, setCnic] = useState('');
     const [cnicLocked, setCnicLocked] = useState(false);
@@ -50,15 +51,17 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
 
     // PMDC validation with debounce
     const validatePmdc = useCallback(async (value: string) => {
-        if (!value.trim()) { setPmdcValid(null); return; }
-        if (value.trim().toLowerCase() === 'special prescriber') { setPmdcValid(true); return; }
+        if (!value.trim()) { setPmdcValid(null); setPmdcMatchedName(null); return; }
+        if (value.trim().toLowerCase() === 'special prescriber') { setPmdcValid(true); setPmdcMatchedName(null); return; }
+        // Auto-capitalize: PMDC format is ####-X (capital letter at end)
+        const normalized = value.trim().toUpperCase();
         setPmdcChecking(true);
         try {
-            const res = await fetch(`/api/pmdc/${encodeURIComponent(value.trim())}`);
+            const res = await fetch(`/api/pmdc/${encodeURIComponent(normalized)}`);
             const data = await res.json();
             setPmdcValid(data.valid);
-            if (data.valid && data.doctor_name) setName(data.doctor_name);
-        } catch { setPmdcValid(false); }
+            setPmdcMatchedName(data.valid && data.doctor_name ? data.doctor_name : null);
+        } catch { setPmdcValid(false); setPmdcMatchedName(null); }
         finally { setPmdcChecking(false); }
     }, []);
 
@@ -216,12 +219,13 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                                 <span className="text-[10px] text-slate-500">Special Prescriber (no PMDC)</span>
                             </label>
                             <input type="text" value={pmdc}
-                                onChange={e => { setPmdc(e.target.value); setPmdcValid(null); }}
+                                onChange={e => { const v = e.target.value.toUpperCase(); setPmdc(v); setPmdcValid(null); setPmdcMatchedName(null); }}
                                 className={`${inputCls} ${pmdcValid === false ? 'border-red-300 focus:ring-red-500/20' : ''} ${isSpecialPrescriber ? 'bg-slate-100 cursor-not-allowed' : ''}`}
                                 placeholder='e.g. 100022-P'
                                 disabled={isSpecialPrescriber}
                                 required />
                             {!isSpecialPrescriber && pmdcValid === false && <p className="text-[10px] text-red-500 mt-0.5">PMDC number not found</p>}
+                            {!isSpecialPrescriber && pmdcMatchedName && <p className="text-[10px] text-green-600 mt-0.5">Registered as: <span className="font-semibold">{pmdcMatchedName}</span></p>}
                         </div>
                         <div>
                             <label className={labelCls}>CNIC <span className="text-red-500">*</span>{cnicLocked && <span className="ml-1 text-amber-500 normal-case">(locked)</span>}</label>

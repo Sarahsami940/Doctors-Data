@@ -302,23 +302,30 @@ export default function App() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {finalizedRecords.map((rec: any) => (
-                      <div key={rec.id} className="px-4 sm:px-6 py-3 hover:bg-slate-50/80 transition-colors">
+                      <div key={rec.id} className={`px-4 sm:px-6 py-3 hover:bg-slate-50/80 transition-colors ${rec.is_deleted ? 'bg-red-50/50' : ''}`}>
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-slate-900">{rec.doctor_name}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {rec.speciality} · {rec.designation} · {rec.qualification}
-                            </p>
+                            {rec.is_deleted ? (
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-600 border border-red-200">Deleted</span>
+                            ) : null}
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] text-slate-400">by {rec.finalized_by}</p>
                             <p className="text-[10px] text-slate-400">{new Date(rec.finalized_at).toLocaleDateString()}</p>
                           </div>
                         </div>
-                        <div className="flex gap-4 mt-1 text-[10px] text-slate-400">
+                        {!rec.is_deleted && (
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {rec.speciality} · {rec.designation} · {rec.qualification}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-3 mt-1 text-[10px] text-slate-400">
                           <span>PMDC (old): {rec.pmdc_number || '—'}</span>
                           <span>PMDC (new): {rec.pmdc_number_new || '—'}</span>
                           <span>CNIC: {rec.cnic || '—'}</span>
+                          <span>Locations: {rec.location_count || 0}</span>
+                          <span>City: {rec.doctor_city_das || '—'}</span>
                         </div>
                       </div>
                     ))}

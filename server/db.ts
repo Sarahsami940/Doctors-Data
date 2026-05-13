@@ -118,6 +118,7 @@ function initSchema(db: Database.Database) {
       pmdc_number TEXT,
       pmdc_number_new TEXT,
       cnic TEXT,
+      is_deleted INTEGER DEFAULT 0,
       finalized_by TEXT NOT NULL,
       finalized_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (source_doctor_id) REFERENCES doctors(id)

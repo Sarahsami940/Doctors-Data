@@ -66,15 +66,10 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
         return () => clearTimeout(t);
     }, [pmdc, validatePmdc]);
 
-    // Mobile mask: 03XX-XXXXXXX (11 digits)
+    // Mobile: 10 digits, no mask
     const handleMobileChange = (val: string) => {
-        const digits = val.replace(/\D/g, '').slice(0, 11);
-        let formatted = '';
-        for (let i = 0; i < digits.length; i++) {
-            if (i === 4) formatted += '-';
-            formatted += digits[i];
-        }
-        setMobile(formatted);
+        const digits = val.replace(/\D/g, '').slice(0, 10);
+        setMobile(digits);
     };
 
     // CNIC mask: 12345-6789012-3
@@ -106,8 +101,8 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                 return;
             }
             const mobileDigits = mobile.replace(/\D/g, '');
-            if (mobileDigits.length !== 11) {
-                onToast('error', 'Mobile number must be 11 digits');
+            if (mobileDigits.length !== 10) {
+                onToast('error', 'Mobile number must be 10 digits');
                 return;
             }
             if (pmdcValid === false) {
@@ -180,8 +175,8 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                         <div>
                             <label className={labelCls}>Mobile <span className="text-red-500">*</span></label>
                             <input type="text" value={mobile} onChange={e => handleMobileChange(e.target.value)}
-                                className={`${inputCls} ${mobile && mobile.replace(/\D/g, '').length > 0 && mobile.replace(/\D/g, '').length < 11 ? 'border-amber-300' : ''}`}
-                                placeholder="03XX-XXXXXXX" required />
+                                className={`${inputCls} ${mobile && mobile.replace(/\D/g, '').length > 0 && mobile.replace(/\D/g, '').length < 10 ? 'border-amber-300' : ''}`}
+                                placeholder="3XXXXXXXXX" required />
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -7,7 +7,7 @@ import DashboardKpi from './components/DashboardKpi';
 import AdminDashboard from './components/AdminDashboard';
 import AdvancedSearch, { SearchFilters, emptyFilters } from './components/AdvancedSearch';
 import Toast from './components/Toast';
-import { User, Stethoscope, Shield, ArrowLeftRight, Database, CheckCircle, MapPin, ArrowLeft, Loader2 } from 'lucide-react';
+import { User, Stethoscope, Shield, ArrowLeftRight, Database, CheckCircle, MapPin, ArrowLeft, Loader2, Filter } from 'lucide-react';
 import { DashboardStats } from './types';
 
 // Finalized record detail view (inline component)
@@ -133,7 +133,7 @@ export default function App() {
   const [adminAppView, setAdminAppView] = useState(false); // Admin viewing as normal app
   const [suggestionCounts, setSuggestionCounts] = useState<Record<number, number>>({});
   const [viewFinalized, setViewFinalized] = useState(false); // Admin: toggle Master Data vs Finalized
-  const [finalizedFilter, setFinalizedFilter] = useState<'all' | 'finalized' | 'deleted'>('all');
+  const [finalizedFilter, setFinalizedFilter] = useState<'all' | 'finalized' | 'unfinalized' | 'deleted'>('all');
   const [finalizedRecords, setFinalizedRecords] = useState<any[]>([]);
   const [finalizedLoading, setFinalizedLoading] = useState(false);
   const [selectedFinalizedId, setSelectedFinalizedId] = useState<number | null>(null);
@@ -441,17 +441,19 @@ export default function App() {
                     )}
                   </button>
                 </div>
-                <div className="flex items-center gap-0.5 ml-auto">
-                  {(['all', 'finalized', 'deleted'] as const).map(f => (
-                    <button key={f} onClick={() => setFinalizedFilter(f)}
-                      className={`text-[10px] font-medium px-2 py-1 rounded-md transition-all capitalize ${
-                        finalizedFilter === f
-                          ? 'bg-amber-100 text-amber-800 shadow-sm'
-                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                      }`}>
-                      {f}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <Filter className="w-3 h-3 text-slate-400" />
+                  <select
+                    value={finalizedFilter}
+                    onChange={e => setFinalizedFilter(e.target.value as any)}
+                    className="text-[11px] font-medium px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer appearance-none pr-5"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 4px center' }}
+                  >
+                    <option value="all">All Records</option>
+                    <option value="finalized">Finalized</option>
+                    <option value="unfinalized">Unfinalized</option>
+                    <option value="deleted">Deleted</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -480,7 +482,7 @@ export default function App() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {finalizedRecords
-                      .filter(rec => finalizedFilter === 'all' ? true : finalizedFilter === 'deleted' ? rec.is_deleted : !rec.is_deleted)
+                      .filter(rec => finalizedFilter === 'unfinalized' ? false : finalizedFilter === 'all' ? true : finalizedFilter === 'deleted' ? rec.is_deleted : !rec.is_deleted)
                       .map((rec: any) => (
                       <div key={rec.id} onClick={() => setSelectedFinalizedId(rec.source_doctor_id)}
                         className={`px-4 sm:px-6 py-3 cursor-pointer transition-colors ${rec.is_deleted ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50/80'} ${selectedFinalizedId === rec.source_doctor_id ? 'bg-amber-50 border-l-2 border-amber-400' : ''}`}>
@@ -514,7 +516,7 @@ export default function App() {
               </div>
             ) : (
               <DoctorList
-                doctors={finalizedFilter === 'deleted' ? [] : finalizedFilter === 'finalized' ? doctors.filter(d => finalizedDoctorIds.has(d.id)) : doctors}
+                doctors={finalizedFilter === 'deleted' ? [] : finalizedFilter === 'finalized' ? doctors.filter(d => finalizedDoctorIds.has(d.id)) : finalizedFilter === 'unfinalized' ? doctors.filter(d => !finalizedDoctorIds.has(d.id)) : doctors}
                 selectedDoctorId={selectedDoctorId}
                 onSelectDoctor={handleSelectDoctor}
                 pagination={finalizedFilter !== 'all' ? null : pagination}

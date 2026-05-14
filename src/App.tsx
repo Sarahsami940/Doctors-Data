@@ -333,9 +333,17 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {!session && <UserPrompt onSessionCreated={setSession} />}
 
+      <style>{`
+        @media (min-width: 768px) {
+          #sidebar-panel {
+            flex-basis: ${panelWidth}%;
+            max-width: ${panelWidth}%;
+          }
+        }
+      `}</style>
       <div className="flex flex-col md:flex-row h-screen">
         {/* Sidebar */}
-        <div style={{ flexBasis: `${panelWidth}%`, maxWidth: `${panelWidth}%` }} className={`w-full md:w-auto border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
+        <div id="sidebar-panel" className={`w-full md:w-auto border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
           <div className={`${isAdmin ? 'px-5 pt-4 pb-2 space-y-3' : 'px-4 pt-3 pb-1.5 space-y-2'} border-b shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">

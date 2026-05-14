@@ -136,8 +136,37 @@ export default function App() {
   const [finalizedRecords, setFinalizedRecords] = useState<any[]>([]);
   const [finalizedLoading, setFinalizedLoading] = useState(false);
   const [selectedFinalizedId, setSelectedFinalizedId] = useState<number | null>(null);
+  const [panelWidth, setPanelWidth] = useState(() => {
+    const saved = localStorage.getItem('dd-panel-width');
+    return saved ? Number(saved) : 42;
+  });
+  const isDragging = useRef(false);
   const logoClickCount = useRef(0);
   const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Panel resize handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const pct = (ev.clientX / window.innerWidth) * 100;
+      const clamped = Math.max(20, Math.min(70, pct));
+      setPanelWidth(clamped);
+    };
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      setPanelWidth(prev => { localStorage.setItem('dd-panel-width', String(prev)); return prev; });
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   const isAdmin = session?.role === 'Admin' && !adminAppView;
 
@@ -306,7 +335,7 @@ export default function App() {
 
       <div className="flex flex-col md:flex-row h-screen">
         {/* Sidebar */}
-        <div className={`w-full ${isAdmin ? 'md:w-[360px] lg:w-[400px] xl:w-[30%]' : 'md:w-[520px] lg:w-[600px] xl:w-[50%]'} border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
+        <div style={{ flexBasis: `${panelWidth}%`, maxWidth: `${panelWidth}%` }} className={`w-full md:w-auto border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
           <div className={`${isAdmin ? 'px-5 pt-4 pb-2 space-y-3' : 'px-4 pt-3 pb-1.5 space-y-2'} border-b shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">
@@ -463,6 +492,15 @@ export default function App() {
               />
             )}
           </div>
+        </div>
+
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="hidden md:flex w-1.5 h-screen shrink-0 cursor-col-resize items-center justify-center group hover:bg-indigo-100 active:bg-indigo-200 transition-colors relative z-20"
+          title="Drag to resize"
+        >
+          <div className="w-0.5 h-8 bg-slate-300 rounded-full group-hover:bg-indigo-400 group-active:bg-indigo-500 transition-colors" />
         </div>
 
         {/* Detail View */}

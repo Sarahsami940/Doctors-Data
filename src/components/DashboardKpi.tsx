@@ -79,7 +79,7 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
                     <div
                         key={idx}
                         onClick={() => onKpiClick(isActive ? 'all' : item.id)}
-                        className={`px-2.5 py-3 rounded-lg border flex flex-col justify-center gap-1 transition-all relative cursor-pointer
+                        className={`px-2.5 py-2 rounded-lg border flex flex-col justify-center gap-0.5 transition-all relative cursor-pointer
                         ${isActive
                                 ? `${item.activeBg} ${item.activeBorder} text-white shadow-md ring-1 ring-offset-1 ring-${item.activeBg.split('-')[1]}-400 scale-[1.02] z-10`
                                 : `${item.bg} ${item.border} text-slate-900 hover:shadow-sm`

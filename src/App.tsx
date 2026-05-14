@@ -352,7 +352,7 @@ export default function App() {
             </div>
 
             {/* Filters + KPIs side by side */}
-            <div className="flex gap-3 items-start">
+            <div className="flex gap-3 items-stretch">
               <div className="flex-1 min-w-0">
                 <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
               </div>

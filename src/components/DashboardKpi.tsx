@@ -89,7 +89,7 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
                         onMouseLeave={() => setHoveredIdx(null)}
                     >
                         <div className="flex justify-between items-start">
-                            <span className={`text-[9px] uppercase tracking-wider font-bold truncate leading-tight ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                            <span className={`text-[9px] uppercase tracking-wider font-bold leading-tight break-words ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
                                 {item.label}
                             </span>
                             {isActive && item.id !== 'all' && (

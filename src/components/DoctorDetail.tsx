@@ -209,10 +209,6 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                                                                 <Check className="w-3 h-3" /> Finalize
                                                             </button>
                                                         )}
-                                                        <button onClick={() => handleSuggestionAction(s.id, 'rejected')}
-                                                            className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded font-medium hover:bg-slate-200 transition-all">
-                                                            <X className="w-3 h-3" /> Reject
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>

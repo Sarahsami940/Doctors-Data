@@ -353,7 +353,7 @@ export default function App() {
         {/* Sidebar */}
         <div id="sidebar-panel" className={`w-full md:w-auto border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
-          <div className={`${isAdmin ? 'px-5 pt-4 pb-2 space-y-3' : 'px-4 pt-3 pb-1.5 space-y-2'} border-b shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
+          <div className={`px-4 pt-3 pb-1.5 border-b space-y-2 shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-3">
                 <button onClick={handleLogoClick}
@@ -396,28 +396,19 @@ export default function App() {
               </div>
             </div>
 
-            {isAdmin ? (
-              <>
+            {/* Filters + KPIs side by side on large screens */}
+            <div className="flex gap-3 items-stretch">
+              <div className="flex-1 min-w-0">
                 <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
+              </div>
+              <div className="hidden lg:block w-[200px] shrink-0 [&>div]:h-full">
                 <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
-              </>
-            ) : (
-              <>
-                {/* Filters + KPIs side by side on large screens */}
-                <div className="flex gap-3 items-stretch">
-                  <div className="flex-1 min-w-0">
-                    <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
-                  </div>
-                  <div className="hidden lg:block w-[200px] shrink-0 [&>div]:h-full">
-                    <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
-                  </div>
-                </div>
-                {/* KPI tiles below on smaller screens */}
-                <div className="lg:hidden">
-                  <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
-                </div>
-              </>
-            )}
+              </div>
+            </div>
+            {/* KPI tiles below on smaller screens */}
+            <div className="lg:hidden">
+              <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+            </div>
 
             {/* Admin: View Switcher + Filter */}
             {isAdmin && (

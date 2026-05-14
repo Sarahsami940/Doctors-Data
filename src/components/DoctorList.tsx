@@ -12,6 +12,7 @@ type DoctorListProps = {
     isLoadingMore: boolean;
     suggestionCounts?: Record<number, number>;
     isAdmin?: boolean;
+    finalizedDoctorIds?: Set<number>;
 };
 
 export default function DoctorList({
@@ -24,6 +25,7 @@ export default function DoctorList({
     isLoadingMore,
     suggestionCounts,
     isAdmin,
+    finalizedDoctorIds,
 }: DoctorListProps) {
     const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -119,6 +121,11 @@ export default function DoctorList({
                                     {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
                                         <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border border-amber-200">
                                             {suggestionCounts[doctor.id]}
+                                        </span>
+                                    )}
+                                    {finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
+                                        <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 bg-green-50 text-green-600 border border-green-200 tracking-wide">
+                                            ✓ Finalized
                                         </span>
                                     )}
                                 </div>

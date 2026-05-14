@@ -388,4 +388,15 @@ router.get('/finalized', (req: Request, res: Response) => {
     }
 });
 
+// GET /api/finalized/ids — Get set of finalized source_doctor_ids (lightweight)
+router.get('/finalized/ids', (req: Request, res: Response) => {
+    try {
+        const db = getDb();
+        const rows = db.prepare('SELECT DISTINCT source_doctor_id FROM doctors_finalized').all() as any[];
+        res.json(rows.map(r => r.source_doctor_id));
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch finalized IDs' });
+    }
+});
+
 export default router;

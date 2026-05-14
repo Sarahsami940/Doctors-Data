@@ -136,6 +136,7 @@ export default function App() {
   const [finalizedRecords, setFinalizedRecords] = useState<any[]>([]);
   const [finalizedLoading, setFinalizedLoading] = useState(false);
   const [selectedFinalizedId, setSelectedFinalizedId] = useState<number | null>(null);
+  const [finalizedDoctorIds, setFinalizedDoctorIds] = useState<Set<number>>(new Set());
   const [panelWidth, setPanelWidth] = useState(() => {
     const saved = localStorage.getItem('dd-panel-width');
     return saved ? Number(saved) : 42;
@@ -207,6 +208,12 @@ export default function App() {
       const map: Record<number, number> = {};
       for (const row of data) map[row.doctor_id] = row.pending_count;
       setSuggestionCounts(map);
+    } catch {}
+    // Also fetch finalized doctor IDs
+    try {
+      const res = await fetch('/api/finalized/ids');
+      const ids: number[] = await res.json();
+      setFinalizedDoctorIds(new Set(ids));
     } catch {}
   }, [session]);
 
@@ -497,6 +504,7 @@ export default function App() {
                 isLoadingMore={isLoadingMore}
                 suggestionCounts={isAdmin ? suggestionCounts : undefined}
                 isAdmin={isAdmin}
+                finalizedDoctorIds={isAdmin ? finalizedDoctorIds : undefined}
               />
             )}
           </div>

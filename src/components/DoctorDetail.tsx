@@ -156,29 +156,35 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                                 <table className="min-w-full divide-y divide-amber-100 text-left">
                                     <thead className="bg-amber-50">
                                         <tr>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Submitted By</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Name</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Speciality</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">PMDC</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">CNIC</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Type</th>
-                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Actions</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">By</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Name</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Mobile</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Speciality</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Designation</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Qualification</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">PMDC</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">CNIC</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Type</th>
+                                            <th className="px-2 py-2 text-[9px] font-semibold text-amber-700 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-amber-50">
                                         {pendingSuggestions.map(s => (
                                             <tr key={s.id} className={`hover:bg-amber-50/40 transition-colors ${editingSuggestion?.id === s.id ? 'bg-amber-50/60' : ''}`}>
-                                                <td className="px-3 py-2 text-xs text-slate-700">{s.employee_name}<br/><span className="text-[10px] text-slate-400">{s.team}</span></td>
-                                                <td className="px-3 py-2 text-xs font-medium text-slate-800">{s.suggest_delete ? <span className="text-red-600">⚠ DELETE</span> : s.suggested_name}</td>
-                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_speciality || '—'}</td>
-                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_pmdc || '—'}</td>
-                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_cnic || '—'}</td>
-                                                <td className="px-3 py-2">
+                                                <td className="px-2 py-2 text-[11px] text-slate-700 whitespace-normal break-words max-w-[80px]">{s.employee_name}<br/><span className="text-[10px] text-slate-400">{s.team}</span></td>
+                                                <td className="px-2 py-2 text-[11px] font-medium text-slate-800 whitespace-normal break-words max-w-[100px]">{s.suggest_delete ? <span className="text-red-600">⚠ DELETE</span> : s.suggested_name}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-nowrap">{s.suggested_mobile || '—'}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-normal break-words max-w-[90px]">{s.suggested_speciality || '—'}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-normal break-words max-w-[90px]">{s.suggested_designation || '—'}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-normal break-words max-w-[90px]">{s.suggested_qualification || '—'}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-nowrap">{s.suggested_pmdc || '—'}</td>
+                                                <td className="px-2 py-2 text-[11px] text-slate-600 whitespace-nowrap">{s.suggested_cnic || '—'}</td>
+                                                <td className="px-2 py-2">
                                                     <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${s.suggest_delete ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
                                                         {s.suggest_delete ? 'Delete' : 'Update'}
                                                     </span>
                                                 </td>
-                                                <td className="px-3 py-2">
+                                                <td className="px-2 py-2">
                                                     <div className="flex gap-1">
                                                         {!s.suggest_delete && (
                                                             <button onClick={() => setEditingSuggestion(editingSuggestion?.id === s.id ? null : s)}

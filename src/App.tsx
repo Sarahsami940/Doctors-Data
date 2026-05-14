@@ -7,8 +7,110 @@ import DashboardKpi from './components/DashboardKpi';
 import AdminDashboard from './components/AdminDashboard';
 import AdvancedSearch, { SearchFilters, emptyFilters } from './components/AdvancedSearch';
 import Toast from './components/Toast';
-import { User, Stethoscope, Shield, ArrowLeftRight, Database, CheckCircle } from 'lucide-react';
+import { User, Stethoscope, Shield, ArrowLeftRight, Database, CheckCircle, MapPin, ArrowLeft, Loader2 } from 'lucide-react';
 import { DashboardStats } from './types';
+
+// Finalized record detail view (inline component)
+function FinalizedDetailView({ record, onBack }: { record: any; onBack: () => void }) {
+  const [locations, setLocations] = useState<any[]>([]);
+  const [loadingLocs, setLoadingLocs] = useState(false);
+
+  useEffect(() => {
+    if (!record) return;
+    setLoadingLocs(true);
+    fetch(`/api/doctors/${record.source_doctor_id}`)
+      .then(r => r.json())
+      .then(data => setLocations(data.locations || []))
+      .catch(() => {})
+      .finally(() => setLoadingLocs(false));
+  }, [record?.source_doctor_id]);
+
+  if (!record) return <div className="h-full flex items-center justify-center text-slate-400"><p>Record not found</p></div>;
+
+  return (
+    <div className="p-5 sm:p-8 lg:p-10 w-full max-w-4xl mx-auto">
+      <button onClick={onBack} className="md:hidden flex items-center text-sm text-slate-500 hover:text-slate-900 mb-6 transition-colors group">
+        <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" /> Back to list
+      </button>
+
+      {/* Header */}
+      <div className="border-b border-slate-200 pb-5 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">{record.doctor_name}</h2>
+          {record.is_deleted ? (
+            <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-red-100 text-red-600 border border-red-200">Deleted</span>
+          ) : (
+            <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-green-100 text-green-600 border border-green-200">Finalized</span>
+          )}
+        </div>
+
+        {/* Attribute tiles */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {[
+            ['Speciality', record.speciality],
+            ['Designation', record.designation],
+            ['Qualification', record.qualification],
+            ['Mobile', record.mobile_number],
+            ['PMDC (Original)', record.pmdc_number],
+            ['PMDC (New)', record.pmdc_number_new],
+            ['CNIC', record.cnic],
+            ['City (DAS)', record.doctor_city_das],
+            ['Finalized By', record.finalized_by],
+            ['Finalized At', record.finalized_at ? new Date(record.finalized_at).toLocaleDateString() : '—'],
+          ].map(([label, value]) => (
+            <div key={label as string} className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+              <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+              <p className="text-xs font-medium text-slate-700 truncate">{value || 'N/A'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Associated Locations */}
+      <div>
+        <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2 mb-4">
+          <MapPin className="w-5 h-5 text-amber-500" /> Associated Locations
+          {locations.length > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">{locations.length}</span>}
+        </h3>
+
+        {loadingLocs ? (
+          <div className="text-center py-8"><Loader2 className="w-6 h-6 text-amber-500 animate-spin mx-auto" /></div>
+        ) : locations.length > 0 ? (
+          <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-left">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">City (Expense)</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">City (DAS)</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Brick (DAS)</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Added By</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {locations.map((loc: any) => (
+                    <tr key={loc.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-700">{loc.city_expense}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{loc.city_das}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{loc.brick_das}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">{loc.location_name || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-slate-400">{loc.added_by_name || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-300">
+            <p className="text-sm text-slate-500">No locations recorded for this doctor</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   // Admin route guard — accessible at /admin?key=atco2024
@@ -33,6 +135,7 @@ export default function App() {
   const [viewFinalized, setViewFinalized] = useState(false); // Admin: toggle Master Data vs Finalized
   const [finalizedRecords, setFinalizedRecords] = useState<any[]>([]);
   const [finalizedLoading, setFinalizedLoading] = useState(false);
+  const [selectedFinalizedId, setSelectedFinalizedId] = useState<number | null>(null);
   const logoClickCount = useRef(0);
   const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -203,7 +306,7 @@ export default function App() {
 
       <div className="flex flex-col md:flex-row h-screen">
         {/* Sidebar */}
-        <div className={`w-full md:w-[520px] lg:w-[600px] xl:w-[50%] border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full ${isAdmin ? 'md:w-[360px] lg:w-[400px] xl:w-[30%]' : 'md:w-[520px] lg:w-[600px] xl:w-[50%]'} border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
           <div className={`px-5 pt-4 pb-2 border-b space-y-3 shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">
@@ -302,31 +405,25 @@ export default function App() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {finalizedRecords.map((rec: any) => (
-                      <div key={rec.id} className={`px-4 sm:px-6 py-3 hover:bg-slate-50/80 transition-colors ${rec.is_deleted ? 'bg-red-50/50' : ''}`}>
+                      <div key={rec.id} onClick={() => setSelectedFinalizedId(rec.source_doctor_id)}
+                        className={`px-4 sm:px-6 py-3 cursor-pointer transition-colors ${rec.is_deleted ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50/80'} ${selectedFinalizedId === rec.source_doctor_id ? 'bg-amber-50 border-l-2 border-amber-400' : ''}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-slate-900">{rec.doctor_name}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate">{rec.doctor_name}</p>
                             {rec.is_deleted ? (
                               <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-600 border border-red-200">Deleted</span>
                             ) : null}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className="text-[10px] text-slate-400">by {rec.finalized_by}</p>
                             <p className="text-[10px] text-slate-400">{new Date(rec.finalized_at).toLocaleDateString()}</p>
                           </div>
                         </div>
                         {!rec.is_deleted && (
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {rec.speciality} · {rec.designation} · {rec.qualification}
+                          <p className="text-xs text-slate-500 mt-0.5 truncate">
+                            {rec.speciality} · {rec.designation}
                           </p>
                         )}
-                        <div className="flex flex-wrap gap-3 mt-1 text-[10px] text-slate-400">
-                          <span>PMDC (old): {rec.pmdc_number || '—'}</span>
-                          <span>PMDC (new): {rec.pmdc_number_new || '—'}</span>
-                          <span>CNIC: {rec.cnic || '—'}</span>
-                          <span>Locations: {rec.location_count || 0}</span>
-                          <span>City: {rec.doctor_city_das || '—'}</span>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -349,8 +446,13 @@ export default function App() {
         </div>
 
         {/* Detail View */}
-        <div className={`flex-1 h-screen overflow-y-auto bg-white ${!selectedDoctorId ? 'hidden md:block' : 'block'}`}>
-          {selectedDoctorId && session ? (
+        <div className={`flex-1 h-screen overflow-y-auto bg-white ${!selectedDoctorId && !selectedFinalizedId ? 'hidden md:block' : 'block'}`}>
+          {viewFinalized && selectedFinalizedId ? (
+            <FinalizedDetailView
+              record={finalizedRecords.find((r: any) => r.source_doctor_id === selectedFinalizedId)}
+              onBack={() => setSelectedFinalizedId(null)}
+            />
+          ) : selectedDoctorId && session ? (
             <DoctorDetail
               doctorId={selectedDoctorId}
               session={session}

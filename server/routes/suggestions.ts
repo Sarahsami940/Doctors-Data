@@ -60,14 +60,6 @@ router.post('/doctors/:id/suggestions', (req: Request, res: Response) => {
             if (!cnicRegex.test(suggested_cnic.trim())) {
                 return res.status(400).json({ error: 'CNIC must be in format: 12345-6789012-3' });
             }
-
-            // Handle CNIC lock — first entry locks it
-            const existingCnic = db.prepare('SELECT cnic FROM doctor_cnic WHERE doctor_id = ?').get(doctorId) as any;
-            if (!existingCnic) {
-                // First CNIC entry — lock it
-                db.prepare('INSERT INTO doctor_cnic (doctor_id, cnic, submitted_by_session) VALUES (?, ?, ?)')
-                    .run(doctorId, suggested_cnic.trim(), session_id);
-            }
         } else {
             // Delete suggestion requires reason
             if (!delete_reason?.trim()) {
@@ -217,12 +209,14 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
             const originalDoctor = db.prepare('SELECT * FROM doctors WHERE id = ?').get(suggestion.doctor_id) as any;
 
             if (suggestion.suggest_delete) {
+                // Check if already finalized (non-delete)
+                const existing = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ? AND is_deleted = 0').get(suggestion.doctor_id) as any;
+
                 // Soft delete the doctor
                 db.prepare("UPDATE doctors SET deleted_at = datetime('now') WHERE id = ?")
                     .run(suggestion.doctor_id);
 
-                // Also record in finalized as deleted
-                const existing = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ?').get(suggestion.doctor_id) as any;
+                // Record in finalized as deleted
                 if (existing) {
                     db.prepare(`
                         UPDATE doctors_finalized SET is_deleted = 1, finalized_by = ?, finalized_at = datetime('now')
@@ -243,54 +237,54 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
                         originalDoctor?.designation || null,
                         originalDoctor?.qualification || null,
                         originalDoctor?.pmdc_number || null,
-                        null,
-                        null,
+                        null, null,
                         reviewed_by.trim()
                     );
                 }
             } else {
-                // UPSERT into doctors_finalized — update if exists, insert if not
-                const finalData = overrides || {};
-                const existing = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ?').get(suggestion.doctor_id) as any;
-
-                const vals = {
-                    name: finalData.doctor_name || suggestion.suggested_name,
-                    mobile: finalData.mobile_number || suggestion.suggested_mobile,
-                    speciality: finalData.speciality || suggestion.suggested_speciality,
-                    designation: finalData.designation || suggestion.suggested_designation,
-                    qualification: finalData.qualification || suggestion.suggested_qualification,
-                    pmdc_old: originalDoctor?.pmdc_number || null,
-                    pmdc_new: finalData.pmdc_number || suggestion.suggested_pmdc,
-                    cnic: finalData.cnic || suggestion.suggested_cnic,
-                };
-
-                if (existing) {
-                    db.prepare(`
-                        UPDATE doctors_finalized SET
-                            doctor_name = ?, mobile_number = ?,
-                            speciality = ?, designation = ?, qualification = ?,
-                            pmdc_number = ?, pmdc_number_new = ?, cnic = ?,
-                            finalized_by = ?, finalized_at = datetime('now'), is_deleted = 0
-                        WHERE source_doctor_id = ?
-                    `).run(
-                        vals.name, vals.mobile, vals.speciality, vals.designation, vals.qualification,
-                        vals.pmdc_old, vals.pmdc_new, vals.cnic,
-                        reviewed_by.trim(), suggestion.doctor_id
-                    );
-                } else {
-                    db.prepare(`
-                        INSERT INTO doctors_finalized (
-                            source_doctor_id, doctor_name, mobile_number,
-                            speciality, designation, qualification,
-                            pmdc_number, pmdc_number_new, cnic, finalized_by
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `).run(
-                        suggestion.doctor_id,
-                        vals.name, vals.mobile, vals.speciality, vals.designation, vals.qualification,
-                        vals.pmdc_old, vals.pmdc_new, vals.cnic,
-                        reviewed_by.trim()
-                    );
+                // Check: only one finalization per doctor
+                const existingFinalized = db.prepare('SELECT id FROM doctors_finalized WHERE source_doctor_id = ?').get(suggestion.doctor_id) as any;
+                if (existingFinalized) {
+                    return res.status(400).json({ error: 'This doctor record has already been finalized. Only one finalization is allowed per record.' });
                 }
+
+                const finalData = overrides || {};
+                const cnicVal = (finalData.cnic || suggestion.suggested_cnic || '').trim();
+                const pmdcVal = (finalData.pmdc_number || suggestion.suggested_pmdc || '').trim();
+
+                // Check CNIC uniqueness across finalized records
+                if (cnicVal) {
+                    const dupCnic = db.prepare('SELECT id, doctor_name FROM doctors_finalized WHERE cnic = ? AND source_doctor_id != ?').get(cnicVal, suggestion.doctor_id) as any;
+                    if (dupCnic) {
+                        return res.status(400).json({ error: `CNIC "${cnicVal}" is already assigned to finalized record: ${dupCnic.doctor_name}` });
+                    }
+                }
+
+                // Check PMDC uniqueness (skip "Special Prescriber")
+                if (pmdcVal && pmdcVal.toLowerCase() !== 'special prescriber') {
+                    const dupPmdc = db.prepare('SELECT id, doctor_name FROM doctors_finalized WHERE pmdc_number_new = ? AND source_doctor_id != ?').get(pmdcVal, suggestion.doctor_id) as any;
+                    if (dupPmdc) {
+                        return res.status(400).json({ error: `PMDC "${pmdcVal}" is already assigned to finalized record: ${dupPmdc.doctor_name}` });
+                    }
+                }
+
+                db.prepare(`
+                    INSERT INTO doctors_finalized (
+                        source_doctor_id, doctor_name, mobile_number,
+                        speciality, designation, qualification,
+                        pmdc_number, pmdc_number_new, cnic, finalized_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).run(
+                    suggestion.doctor_id,
+                    finalData.doctor_name || suggestion.suggested_name,
+                    finalData.mobile_number || suggestion.suggested_mobile,
+                    finalData.speciality || suggestion.suggested_speciality,
+                    finalData.designation || suggestion.suggested_designation,
+                    finalData.qualification || suggestion.suggested_qualification,
+                    originalDoctor?.pmdc_number || null,
+                    pmdcVal, cnicVal,
+                    reviewed_by.trim()
+                );
             }
         }
 
@@ -298,6 +292,43 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Error updating suggestion:', error);
         res.status(500).json({ error: 'Failed to update suggestion', details: error.message });
+    }
+});
+
+// PUT /api/suggestions/:id — Admin edits suggestion values
+router.put('/suggestions/:id', (req: Request, res: Response) => {
+    try {
+        const db = getDb();
+        const suggestionId = parseInt(req.params.id);
+        const { suggested_name, suggested_mobile, suggested_speciality, suggested_designation,
+                suggested_qualification, suggested_pmdc, suggested_cnic } = req.body;
+
+        const suggestion = db.prepare('SELECT * FROM doctor_suggestions WHERE id = ?').get(suggestionId) as any;
+        if (!suggestion) return res.status(404).json({ error: 'Suggestion not found' });
+        if (suggestion.status !== 'pending') return res.status(400).json({ error: 'Can only edit pending suggestions' });
+
+        db.prepare(`
+            UPDATE doctor_suggestions SET
+                suggested_name = ?, suggested_mobile = ?,
+                suggested_speciality = ?, suggested_designation = ?, suggested_qualification = ?,
+                suggested_pmdc = ?, suggested_cnic = ?
+            WHERE id = ?
+        `).run(
+            suggested_name?.trim() || suggestion.suggested_name,
+            suggested_mobile?.trim() || suggestion.suggested_mobile,
+            suggested_speciality?.trim() || suggestion.suggested_speciality,
+            suggested_designation?.trim() || suggestion.suggested_designation,
+            suggested_qualification?.trim() || suggestion.suggested_qualification,
+            suggested_pmdc?.trim() || suggestion.suggested_pmdc,
+            suggested_cnic?.trim() || suggestion.suggested_cnic,
+            suggestionId
+        );
+
+        const updated = db.prepare('SELECT * FROM doctor_suggestions WHERE id = ?').get(suggestionId);
+        res.json(updated);
+    } catch (error: any) {
+        console.error('Error editing suggestion:', error);
+        res.status(500).json({ error: 'Failed to edit suggestion', details: error.message });
     }
 });
 

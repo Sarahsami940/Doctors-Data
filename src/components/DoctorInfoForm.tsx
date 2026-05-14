@@ -23,7 +23,6 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
     const [pmdcMatchedName, setPmdcMatchedName] = useState<string | null>(null);
     const [isSpecialPrescriber, setIsSpecialPrescriber] = useState(false);
     const [cnic, setCnic] = useState('');
-    const [cnicLocked, setCnicLocked] = useState(false);
     const [changeReason, setChangeReason] = useState('');
     const [suggestDelete, setSuggestDelete] = useState(false);
     const [deleteReason, setDeleteReason] = useState('');
@@ -31,13 +30,10 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
     const [submitted, setSubmitted] = useState(false);
     const [options, setOptions] = useState<DropdownOptions>({ speciality: [], designation: [], qualification: [] });
 
-    // Load dropdowns + CNIC status
+    // Load dropdowns
     useEffect(() => {
         fetch('/api/dropdown-options').then(r => r.json()).then(data => {
             setOptions({ speciality: data.speciality || [], designation: data.designation || [], qualification: data.qualification || [] });
-        }).catch(() => {});
-        fetch(`/api/doctors/${doctorId}/cnic-status`).then(r => r.json()).then(data => {
-            if (data.locked) { setCnic(data.cnic); setCnicLocked(true); }
         }).catch(() => {});
     }, [doctorId]);
 
@@ -228,12 +224,11 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                             {!isSpecialPrescriber && pmdcMatchedName && <p className="text-[10px] text-green-600 mt-0.5">Registered as: <span className="font-semibold">{pmdcMatchedName}</span></p>}
                         </div>
                         <div>
-                            <label className={labelCls}>CNIC <span className="text-red-500">*</span>{cnicLocked && <span className="ml-1 text-amber-500 normal-case">(locked)</span>}</label>
+                            <label className={labelCls}>CNIC <span className="text-red-500">*</span></label>
                             {/* Spacer to match PMDC checkbox height */}
                             <div className="hidden sm:block h-[22px]" />
                             <input type="text" value={cnic} onChange={e => handleCnicChange(e.target.value)}
-                                className={inputCls} placeholder="12345-6789012-3" readOnly={cnicLocked}
-                                style={cnicLocked ? { backgroundColor: '#f8fafc', cursor: 'not-allowed' } : {}} required />
+                                className={inputCls} placeholder="12345-6789012-3" required />
                         </div>
                     </div>
                     <div>

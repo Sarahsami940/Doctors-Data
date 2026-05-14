@@ -3,6 +3,7 @@ import { DoctorDetail as DoctorDetailType, LocationRecord, UserSession, DoctorSu
 import { MapPin, Plus, User, ArrowLeft, MapPinned, Loader2, FileText, Check, X, Pencil, Trash2 } from 'lucide-react';
 import AddLocationForm from './AddLocationForm';
 import DoctorInfoForm from './DoctorInfoForm';
+import AdminEditForm from './AdminEditForm';
 
 type DoctorDetailProps = {
     doctorId: number;
@@ -21,6 +22,7 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
     const [isAddingLocation, setIsAddingLocation] = useState(false);
     const [suggestions, setSuggestions] = useState<DoctorSuggestion[]>([]);
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+    const [editingSuggestion, setEditingSuggestion] = useState<DoctorSuggestion | null>(null);
 
     const fetchDoctor = async () => {
         try {
@@ -131,7 +133,7 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                 </div>
             </div>
 
-            {/* === ADMIN VIEW: Show suggestions === */}
+            {/* === ADMIN VIEW: Suggestions Table === */}
             {isAdmin && (
                 <div className="mb-8">
                     <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2 mb-4">
@@ -147,64 +149,96 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                         </div>
                     )}
 
-                    {pendingSuggestions.map(s => (
-                        <div key={s.id} className={`mb-3 p-4 rounded-xl border ${s.suggest_delete ? 'bg-red-50/50 border-red-200' : 'bg-amber-50/50 border-amber-200'}`}>
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <span className="text-xs font-semibold text-slate-700">{s.employee_name}</span>
-                                    <span className="text-[10px] text-slate-400 ml-2">{s.team} · {new Date(s.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>
-                            </div>
-
-                            {s.suggest_delete ? (
-                                <div>
-                                    <p className="text-sm text-red-700 font-medium mb-1">⚠ Deletion Request</p>
-                                    <p className="text-xs text-red-600">Reason: {s.delete_reason}</p>
-                                    <div className="flex gap-2 mt-3">
-                                        {deleteConfirm === s.id ? (
-                                            <div className="flex items-center gap-2 bg-red-100 px-3 py-2 rounded-lg">
-                                                <p className="text-xs text-red-700 font-medium">Delete {doctor.doctor_name}?</p>
-                                                <button onClick={() => handleSuggestionAction(s.id, 'approved')} className="text-xs px-2 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700">Confirm</button>
-                                                <button onClick={() => setDeleteConfirm(null)} className="text-xs px-2 py-1 bg-white text-slate-600 rounded font-medium border hover:bg-slate-50">Cancel</button>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <button onClick={() => setDeleteConfirm(s.id)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all">
-                                                    <Trash2 className="w-3 h-3" /> Delete
-                                                </button>
-                                                <button onClick={() => handleSuggestionAction(s.id, 'rejected')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white text-slate-600 rounded-lg font-medium border hover:bg-slate-50 transition-all">
-                                                    <X className="w-3 h-3" /> Reject
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                                        {[
-                                            ['Name', s.suggested_name], ['Mobile', s.suggested_mobile],
-                                            ['Speciality', s.suggested_speciality], ['Designation', s.suggested_designation],
-                                            ['Qualification', s.suggested_qualification], ['PMDC', s.suggested_pmdc],
-                                            ['CNIC', s.suggested_cnic],
-                                        ].map(([label, val]) => val && (
-                                            <div key={label} className="py-0.5"><span className="text-slate-400">{label}:</span> <span className="text-slate-700 font-medium">{val}</span></div>
+                    {/* Pending Suggestions Table */}
+                    {pendingSuggestions.length > 0 && (
+                        <div className="border border-amber-200 rounded-xl overflow-hidden shadow-sm mb-4">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-amber-100 text-left">
+                                    <thead className="bg-amber-50">
+                                        <tr>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Submitted By</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Name</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Speciality</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">PMDC</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">CNIC</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Type</th>
+                                            <th className="px-3 py-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-amber-50">
+                                        {pendingSuggestions.map(s => (
+                                            <tr key={s.id} className={`hover:bg-amber-50/40 transition-colors ${editingSuggestion?.id === s.id ? 'bg-amber-50/60' : ''}`}>
+                                                <td className="px-3 py-2 text-xs text-slate-700">{s.employee_name}<br/><span className="text-[10px] text-slate-400">{s.team}</span></td>
+                                                <td className="px-3 py-2 text-xs font-medium text-slate-800">{s.suggest_delete ? <span className="text-red-600">⚠ DELETE</span> : s.suggested_name}</td>
+                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_speciality || '—'}</td>
+                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_pmdc || '—'}</td>
+                                                <td className="px-3 py-2 text-xs text-slate-600">{s.suggested_cnic || '—'}</td>
+                                                <td className="px-3 py-2">
+                                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${s.suggest_delete ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {s.suggest_delete ? 'Delete' : 'Update'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex gap-1">
+                                                        {!s.suggest_delete && (
+                                                            <button onClick={() => setEditingSuggestion(editingSuggestion?.id === s.id ? null : s)}
+                                                                className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-amber-100 text-amber-700 rounded font-medium hover:bg-amber-200 transition-all">
+                                                                <Pencil className="w-3 h-3" /> Edit
+                                                            </button>
+                                                        )}
+                                                        {s.suggest_delete ? (
+                                                            deleteConfirm === s.id ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <button onClick={() => handleSuggestionAction(s.id, 'approved')} className="text-[10px] px-2 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700">Yes</button>
+                                                                    <button onClick={() => setDeleteConfirm(null)} className="text-[10px] px-2 py-1 bg-white text-slate-600 rounded border font-medium hover:bg-slate-50">No</button>
+                                                                </div>
+                                                            ) : (
+                                                                <button onClick={() => setDeleteConfirm(s.id)} className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-red-100 text-red-600 rounded font-medium hover:bg-red-200 transition-all">
+                                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                                </button>
+                                                            )
+                                                        ) : (
+                                                            <button onClick={() => handleSuggestionAction(s.id, 'approved')}
+                                                                className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded font-medium hover:bg-green-200 transition-all">
+                                                                <Check className="w-3 h-3" /> Finalize
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => handleSuggestionAction(s.id, 'rejected')}
+                                                            className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded font-medium hover:bg-slate-200 transition-all">
+                                                            <X className="w-3 h-3" /> Reject
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         ))}
-                                    </div>
-                                    {s.change_reason && <p className="text-[10px] text-slate-500 mt-2 italic">Reason: {s.change_reason}</p>}
-                                    <div className="flex gap-2 mt-3">
-                                        <button onClick={() => handleSuggestionAction(s.id, 'approved')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all">
-                                            <Check className="w-3 h-3" /> Approve
-                                        </button>
-                                        <button onClick={() => handleSuggestionAction(s.id, 'rejected')} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-white text-slate-600 rounded-lg font-medium border hover:bg-slate-50 transition-all">
-                                            <X className="w-3 h-3" /> Reject
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    ))}
+                    )}
+
+                    {/* Edit Form (opens below table when admin clicks Edit) */}
+                    {editingSuggestion && !editingSuggestion.suggest_delete && (
+                        <div className="mb-4 p-4 rounded-xl border-2 border-amber-300 bg-amber-50/30">
+                            <h4 className="text-sm font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                                <Pencil className="w-4 h-4" /> Editing Suggestion #{editingSuggestion.id}
+                                <button onClick={() => setEditingSuggestion(null)} className="ml-auto text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                            </h4>
+                            <AdminEditForm
+                                suggestion={editingSuggestion}
+                                onUpdate={(updated) => {
+                                    setSuggestions(prev => prev.map(s => s.id === updated.id ? updated : s));
+                                    setEditingSuggestion(updated);
+                                    onToast('success', 'Suggestion updated');
+                                }}
+                                onFinalize={() => {
+                                    handleSuggestionAction(editingSuggestion.id, 'approved');
+                                    setEditingSuggestion(null);
+                                }}
+                                onToast={onToast}
+                            />
+                        </div>
+                    )}
 
                     {pastSuggestions.length > 0 && (
                         <details className="mt-2">

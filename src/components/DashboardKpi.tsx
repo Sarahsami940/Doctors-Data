@@ -72,14 +72,14 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
     ];
 
     return (
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5 h-full">
             {items.map((item, idx) => {
                 const isActive = activeKpi === item.id || (activeKpi === 'all' && item.id === 'all');
                 return (
                     <div
                         key={idx}
                         onClick={() => onKpiClick(isActive ? 'all' : item.id)}
-                        className={`px-2 py-1.5 rounded-lg border flex flex-col justify-center gap-0 transition-all relative cursor-pointer
+                        className={`px-2.5 py-2 rounded-lg border flex flex-col justify-center gap-0.5 transition-all relative cursor-pointer
                         ${isActive
                                 ? `${item.activeBg} ${item.activeBorder} text-white shadow-md ring-1 ring-offset-1 ring-${item.activeBg.split('-')[1]}-400 scale-[1.02] z-10`
                                 : `${item.bg} ${item.border} text-slate-900 hover:shadow-sm`
@@ -89,7 +89,7 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
                         onMouseLeave={() => setHoveredIdx(null)}
                     >
                         <div className="flex justify-between items-start">
-                            <span className={`text-[8px] uppercase tracking-wider font-bold truncate leading-tight ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                            <span className={`text-[9px] uppercase tracking-wider font-bold truncate leading-tight ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
                                 {item.label}
                             </span>
                             {isActive && item.id !== 'all' && (
@@ -101,7 +101,7 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
                                 null
                             )}
                         </div>
-                        <div className={`text-base font-black leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-lg font-black leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                             {item.value.toLocaleString()}
                         </div>
 

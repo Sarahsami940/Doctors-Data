@@ -74,10 +74,16 @@ export default function AdminEditForm({ suggestion, onUpdate, onFinalize, onToas
                     suggested_qualification: qualification, suggested_pmdc: pmdc, suggested_cnic: cnic
                 })
             });
-            if (!res.ok) { const d = await res.json(); onToast('error', d.error); return; }
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({ error: `Server returned ${res.status}` }));
+                onToast('error', d.error || 'Failed to update suggestion');
+                return;
+            }
             const updated = await res.json();
             onUpdate(updated);
-        } catch { onToast('error', 'Failed to update suggestion'); }
+        } catch (err: any) {
+            onToast('error', `Network error: ${err.message || 'Failed to update suggestion'}`);
+        }
         finally { setSaving(false); }
     };
 

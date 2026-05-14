@@ -308,7 +308,7 @@ export default function App() {
         {/* Sidebar */}
         <div className={`w-full ${isAdmin ? 'md:w-[360px] lg:w-[400px] xl:w-[30%]' : 'md:w-[520px] lg:w-[600px] xl:w-[50%]'} border-r ${isAdmin ? 'border-amber-200' : 'border-slate-200'} bg-white flex flex-col h-screen shrink-0 ${selectedDoctorId ? 'hidden md:flex' : 'flex'}`}>
           {/* Header */}
-          <div className={`px-5 pt-4 pb-2 border-b space-y-3 shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
+          <div className={`px-4 pt-3 pb-1.5 border-b space-y-2 shrink-0 ${isAdmin ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' : 'bg-white border-slate-100'}`}>
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-3">
                 <button onClick={handleLogoClick}
@@ -351,8 +351,19 @@ export default function App() {
               </div>
             </div>
 
-            <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
-            <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+            {/* Filters + KPIs side by side */}
+            <div className="flex gap-3 items-start">
+              <div className="flex-1 min-w-0">
+                <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
+              </div>
+              <div className="hidden lg:block w-[200px] shrink-0">
+                <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+              </div>
+            </div>
+            {/* KPI tiles below search on smaller screens */}
+            <div className="lg:hidden">
+              <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+            </div>
 
             {/* Admin: View Switcher */}
             {isAdmin && (

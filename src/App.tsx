@@ -363,7 +363,7 @@ export default function App() {
                   <div className="flex-1 min-w-0">
                     <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
                   </div>
-                  <div className="hidden lg:block w-[200px] shrink-0">
+                  <div className="hidden lg:block w-[200px] shrink-0 [&>div]:h-full">
                     <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
                   </div>
                 </div>

@@ -72,7 +72,7 @@ export default function DashboardKpi({ stats, isLoading, activeKpi, onKpiClick }
     ];
 
     return (
-        <div className="grid grid-cols-2 gap-1.5 h-full">
+        <div className="grid grid-cols-2 gap-1.5">
             {items.map((item, idx) => {
                 const isActive = activeKpi === item.id || (activeKpi === 'all' && item.id === 'all');
                 return (

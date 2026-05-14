@@ -199,12 +199,6 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
             return res.status(404).json({ error: 'Suggestion not found' });
         }
 
-        // Update suggestion status
-        db.prepare(`
-            UPDATE doctor_suggestions SET status = ?, reviewed_by = ?, reviewed_at = datetime('now')
-            WHERE id = ?
-        `).run(status, reviewed_by.trim(), suggestionId);
-
         if (status === 'approved') {
             const originalDoctor = db.prepare('SELECT * FROM doctors WHERE id = ?').get(suggestion.doctor_id) as any;
 
@@ -287,6 +281,12 @@ router.patch('/suggestions/:id', (req: Request, res: Response) => {
                 );
             }
         }
+
+        // Update suggestion status — only after successful processing above
+        db.prepare(`
+            UPDATE doctor_suggestions SET status = ?, reviewed_by = ?, reviewed_at = datetime('now')
+            WHERE id = ?
+        `).run(status, reviewed_by.trim(), suggestionId);
 
         res.json({ message: `Suggestion ${status}` });
     } catch (error: any) {

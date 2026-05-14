@@ -192,28 +192,30 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                             <ChevronDown className="pointer-events-none absolute right-2 bottom-2.5 w-3.5 h-3.5 text-slate-400" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label className={labelCls}>
-                                PMDC Number <span className="text-red-500">*</span>
-                                {!isSpecialPrescriber && pmdcChecking && <Loader2 className="inline w-3 h-3 ml-1 animate-spin text-indigo-500" />}
-                                {!isSpecialPrescriber && pmdcValid === true && <span className="ml-1 text-green-500">✓</span>}
-                                {!isSpecialPrescriber && pmdcValid === false && <span className="ml-1 text-red-500">✗</span>}
-                            </label>
-                            <label className="flex items-center gap-1.5 mb-1.5 cursor-pointer">
-                                <input type="checkbox" checked={isSpecialPrescriber} onChange={e => {
-                                    setIsSpecialPrescriber(e.target.checked);
-                                    if (e.target.checked) {
-                                        setPmdc('Special Prescriber');
-                                        setPmdcValid(true);
-                                        setPmdcChecking(false);
-                                    } else {
-                                        setPmdc('');
-                                        setPmdcValid(null);
-                                    }
-                                }} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                                <span className="text-[10px] text-slate-500">Special Prescriber (no PMDC)</span>
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className={`${labelCls} !mb-0`}>
+                                    PMDC Number <span className="text-red-500">*</span>
+                                    {!isSpecialPrescriber && pmdcChecking && <Loader2 className="inline w-3 h-3 ml-1 animate-spin text-indigo-500" />}
+                                    {!isSpecialPrescriber && pmdcValid === true && <span className="ml-1 text-green-500">✓</span>}
+                                    {!isSpecialPrescriber && pmdcValid === false && <span className="ml-1 text-red-500">✗</span>}
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer shrink-0">
+                                    <input type="checkbox" checked={isSpecialPrescriber} onChange={e => {
+                                        setIsSpecialPrescriber(e.target.checked);
+                                        if (e.target.checked) {
+                                            setPmdc('Special Prescriber');
+                                            setPmdcValid(true);
+                                            setPmdcChecking(false);
+                                        } else {
+                                            setPmdc('');
+                                            setPmdcValid(null);
+                                        }
+                                    }} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                    <span className="text-[10px] text-slate-500">Special Prescriber (no PMDC)</span>
+                                </label>
+                            </div>
                             <input type="text" value={pmdc}
                                 onChange={e => { const v = e.target.value.toUpperCase(); setPmdc(v); setPmdcValid(null); setPmdcMatchedName(null); }}
                                 className={`${inputCls} ${pmdcValid === false ? 'border-red-300 focus:ring-red-500/20' : ''} ${isSpecialPrescriber ? 'bg-slate-100 cursor-not-allowed' : ''}`}
@@ -225,8 +227,6 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
                         </div>
                         <div>
                             <label className={labelCls}>CNIC <span className="text-red-500">*</span></label>
-                            {/* Spacer to match PMDC checkbox height */}
-                            <div className="hidden sm:block h-[22px]" />
                             <input type="text" value={cnic} onChange={e => handleCnicChange(e.target.value)}
                                 className={inputCls} placeholder="12345-6789012-3" required />
                         </div>

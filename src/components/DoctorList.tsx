@@ -84,7 +84,11 @@ export default function DoctorList({
                 <div className="flex items-center px-4 sm:px-6 py-1.5 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <div className="w-12 shrink-0 text-center">#</div>
                     <div className="flex-1">Name</div>
-                    <div className="hidden sm:block w-28 text-center">Designation</div>
+                    {isAdmin ? (
+                        <div className="hidden sm:block w-32 text-center">Status</div>
+                    ) : (
+                        <div className="hidden sm:block w-28 text-center">Designation</div>
+                    )}
                     <div className="w-5 shrink-0"></div>
                 </div>
             </div>
@@ -118,24 +122,32 @@ export default function DoctorList({
                                             {doctor.location_count}
                                         </span>
                                     )}
-                                    {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
-                                        <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 border border-amber-200">
-                                            {suggestionCounts[doctor.id]}
-                                        </span>
-                                    )}
-                                    {finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
-                                        <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 bg-green-50 text-green-600 border border-green-200 tracking-wide">
-                                            ✓ Finalized
-                                        </span>
-                                    )}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
                                     {doctor.doctor_city_das}{doctor.mobile_number ? ` · ${doctor.mobile_number}` : ''}
                                 </p>
                             </div>
-                            <div className="hidden sm:block w-28 text-center shrink-0">
-                                <span className="text-xs text-slate-500 truncate block">{doctor.designation || '—'}</span>
-                            </div>
+                            {isAdmin ? (
+                                <div className="hidden sm:flex flex-col items-center justify-center gap-1 w-32 shrink-0">
+                                    {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
+                                        <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
+                                            {suggestionCounts[doctor.id]} Suggestion{suggestionCounts[doctor.id] > 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                    {finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
+                                        <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 tracking-wide">
+                                            ✓ Finalized
+                                        </span>
+                                    )}
+                                    {(!suggestionCounts || !suggestionCounts[doctor.id]) && (!finalizedDoctorIds || !finalizedDoctorIds.has(doctor.id)) && (
+                                        <span className="text-[10px] text-slate-300">—</span>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="hidden sm:block w-28 text-center shrink-0">
+                                    <span className="text-xs text-slate-500 truncate block">{doctor.designation || '—'}</span>
+                                </div>
+                            )}
                             <ChevronRight className={`w-5 h-5 shrink-0 text-slate-300 transition-colors ${selectedDoctorId === doctor.id ? (isAdmin ? 'text-amber-500' : 'text-indigo-500') : 'group-hover:text-slate-400'
                                 }`} />
                         </div>

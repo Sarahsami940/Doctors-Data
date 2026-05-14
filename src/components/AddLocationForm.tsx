@@ -163,7 +163,7 @@ export default function AddLocationForm({ doctorId, sessionId, onLocationAdded, 
                     {/* 1. City for Expense — Searchable Dropdown */}
                     <div className="relative">
                         <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                            City for Expense <span className="text-red-500">*</span>
+                            City (city for expense) <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -198,7 +198,7 @@ export default function AddLocationForm({ doctorId, sessionId, onLocationAdded, 
                     {/* 2. City for DAS — Searchable Dropdown */}
                     <div className="relative">
                         <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                            City for DAS <span className="text-red-500">*</span>
+                            Distributor City (City for DAS) <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -237,7 +237,7 @@ export default function AddLocationForm({ doctorId, sessionId, onLocationAdded, 
                     {/* 3. Brick for DAS — Auto-populated from City for DAS */}
                     <div className="relative">
                         <label className="block text-xs font-medium text-slate-600 mb-1.5">
-                            Brick for DAS <span className="text-red-500">*</span>
+                            Brick (Brick for DAS) <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"

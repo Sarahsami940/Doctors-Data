@@ -117,8 +117,27 @@ export default function DoctorList({
                                 </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <p className="text-sm font-medium text-slate-900 truncate">{doctor.doctor_name}</p>
+                                    {/* Mobile Badges */}
+                                    <div className="sm:hidden flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        {doctor.location_count > 0 && (
+                                            <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                                                <MapPin className="w-2.5 h-2.5" />
+                                                {doctor.location_count}
+                                            </span>
+                                        )}
+                                        {isAdmin && suggestionCounts && suggestionCounts[doctor.id] > 0 && (
+                                            <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
+                                                {suggestionCounts[doctor.id]} Sugg.
+                                            </span>
+                                        )}
+                                        {isAdmin && finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
+                                            <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 tracking-wide">
+                                                ✓ Finalized
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
                                     {doctor.doctor_city_das}{doctor.mobile_number ? ` · ${doctor.mobile_number}` : ''}

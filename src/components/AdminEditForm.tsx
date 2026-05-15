@@ -26,8 +26,8 @@ export default function AdminEditForm({ suggestion, onUpdate, onFinalize, onToas
     const [options, setOptions] = useState<DropdownOptions>({ speciality: [], designation: [], qualification: [] });
 
     useEffect(() => {
-        fetch('/api/dropdown-options').then(r => r.json()).then(data => {
-            setOptions({ speciality: data.speciality || [], designation: data.designation || [], qualification: data.qualification || [] });
+        fetch('/api/filter-options').then(r => r.json()).then(data => {
+            setOptions({ speciality: data.specialities || [], designation: data.designations || [], qualification: data.qualifications || [] });
         }).catch(() => {});
     }, []);
 

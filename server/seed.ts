@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DOCTORS_FILE  = path.join(DATA_DIR, 'DoctorsData Application.xlsx');
 const MAPPINGS_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
+const PMDC_FILE     = path.join(DATA_DIR, 'PMDC Lookup.xlsx');
 
 function seedDoctors(force: boolean) {
     const db = getDb();
@@ -151,6 +152,53 @@ function seedCitiesExpense(force: boolean) {
     console.log(`Seeded expense cities`);
 }
 
+function seedPmdc(force: boolean) {
+    const db = getDb();
+
+    const existingCount = db.prepare('SELECT COUNT(*) as c FROM pmdc_lookup').get() as any;
+    if (existingCount.c > 0 && !force) {
+        console.log(`PMDC lookup table already has ${existingCount.c} records. Skipping seed.`);
+        return;
+    }
+
+    if (force) {
+        console.log('Force mode: clearing pmdc_lookup table...');
+        db.exec('DELETE FROM pmdc_lookup');
+    }
+
+    console.log('Reading PMDC lookup from:', PMDC_FILE);
+    const workbook = XLSX.readFile(PMDC_FILE);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${PMDC_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+    console.log(`Using sheet: ${sheetName}`);
+    
+    // Memory efficient row processing since it has 380,000+ rows
+    const rows = XLSX.utils.sheet_to_json<any>(sheet);
+    console.log(`Found ${rows.length} PMDC records`);
+
+    const insert = db.prepare(`
+    INSERT OR IGNORE INTO pmdc_lookup (pmdc_number, doctor_name)
+    VALUES (?, ?)
+  `);
+
+    const insertMany = db.transaction((records: any[]) => {
+        let count = 0;
+        for (const row of records) {
+            const pmdc = (row['RegistrationNo'] || row['Registration No'] || '').toString().trim().toUpperCase();
+            const name = (row['Name'] || '').toString().trim();
+            if (pmdc && name) {
+                insert.run(pmdc, name);
+                count++;
+            }
+        }
+        return count;
+    });
+
+    const seededCount = insertMany(rows);
+    console.log(`Seeded ${seededCount} PMDC lookups`);
+}
+
 function main() {
     const force = process.argv.includes('--force');
     console.log(`Starting database seed...${force ? ' (FORCE MODE — will replace existing data)' : ''}\n`);
@@ -160,6 +208,8 @@ function main() {
         seedCityBrickMapping(force);
         console.log('');
         seedCitiesExpense(force);
+        console.log('');
+        seedPmdc(force);
         console.log('\nSeed completed successfully!');
     } catch (error) {
         console.error('Seed failed:', error);

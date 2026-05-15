@@ -11,7 +11,8 @@ router.get('/', (req: Request, res: Response) => {
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
         const offset = (page - 1) * limit;
 
-        const kpi = String(req.query.kpi || '').trim();
+        const kpi_location = String(req.query.kpi_location || '').trim();
+        const kpi_suggestion = String(req.query.kpi_suggestion || '').trim();
 
         // Advanced search filters (AND logic)
         const name = (req.query.name as string || '').trim();
@@ -64,12 +65,18 @@ router.get('/', (req: Request, res: Response) => {
             params.push(distributor);
         }
 
-        if (kpi === 'no-locations') {
+        if (kpi_location === 'no-locations') {
             conditions.push('NOT EXISTS (SELECT 1 FROM locations WHERE locations.doctor_id = doctors.id)');
-        } else if (kpi === 'single-location') {
+        } else if (kpi_location === 'single-location') {
             conditions.push('doctors.id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) = 1)');
-        } else if (kpi === 'multi-locations') {
+        } else if (kpi_location === 'multi-locations') {
             conditions.push('doctors.id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)');
+        }
+
+        if (kpi_suggestion === 'no-suggestions') {
+            conditions.push('NOT EXISTS (SELECT 1 FROM doctor_suggestions WHERE doctor_suggestions.doctor_id = doctors.id)');
+        } else if (kpi_suggestion === 'with-suggestions') {
+            conditions.push('EXISTS (SELECT 1 FROM doctor_suggestions WHERE doctor_suggestions.doctor_id = doctors.id)');
         }
 
         const whereClause = `WHERE ${conditions.join(' AND ')}`;

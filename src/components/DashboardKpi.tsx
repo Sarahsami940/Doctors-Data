@@ -69,22 +69,22 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
             label: 'No Suggs.',
             value: stats.noSuggestions,
             description: 'No suggestions recorded',
-            bg: 'bg-orange-50 hover:bg-orange-100',
-            border: 'border-orange-100',
-            activeBg: 'bg-orange-500',
-            activeBorder: 'border-orange-600',
-            tooltipBg: 'bg-orange-600'
+            bg: 'bg-rose-50 hover:bg-rose-100',
+            border: 'border-rose-100',
+            activeBg: 'bg-rose-500',
+            activeBorder: 'border-rose-600',
+            tooltipBg: 'bg-rose-600'
         },
         {
             id: 'with-suggestions',
             label: 'With Suggs.',
             value: stats.withSuggestions,
             description: 'Has pending suggestions',
-            bg: 'bg-amber-50 hover:bg-amber-100',
-            border: 'border-amber-100',
-            activeBg: 'bg-amber-500',
-            activeBorder: 'border-amber-600',
-            tooltipBg: 'bg-amber-600'
+            bg: 'bg-violet-50 hover:bg-violet-100',
+            border: 'border-violet-100',
+            activeBg: 'bg-violet-500',
+            activeBorder: 'border-violet-600',
+            tooltipBg: 'bg-violet-600'
         }
     ];
 

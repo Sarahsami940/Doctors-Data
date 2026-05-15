@@ -261,7 +261,7 @@ export default function App() {
     }
   }, [addToast]);
 
-  const fetchStats = useCallback(async (filters?: SearchFilters) => {
+  const fetchStats = useCallback(async (filters?: SearchFilters, locKpi?: string, suggKpi?: string) => {
     setIsStatsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -274,6 +274,8 @@ export default function App() {
         if (filters.city_das) params.set('city_das', filters.city_das);
         if (filters.distributor) params.set('distributor', filters.distributor);
       }
+      if (locKpi && locKpi !== 'all') params.set('kpi_location', locKpi);
+      if (suggKpi && suggKpi !== 'all') params.set('kpi_suggestion', suggKpi);
       const qs = params.toString();
       const res = await fetch(`/api/stats${qs ? '?' + qs : ''}`);
       const data = await res.json();
@@ -288,7 +290,7 @@ export default function App() {
   // Initial load
   useEffect(() => {
     fetchDoctors(emptyFilters, 'all', 'all');
-    fetchStats();
+    fetchStats(emptyFilters, 'all', 'all');
   }, [fetchDoctors, fetchStats]);
 
   // Fetch suggestion counts whenever session changes (admin login)
@@ -302,27 +304,30 @@ export default function App() {
     setCurrentFilters(filters);
     setSelectedDoctorId(null);
     fetchDoctors(filters, activeLocationKpi, activeSuggestionKpi, 1, false);
-    fetchStats(filters);
+    fetchStats(filters, activeLocationKpi, activeSuggestionKpi);
   }, [fetchDoctors, fetchStats, activeLocationKpi, activeSuggestionKpi]);
 
   const handleLocationKpiClick = useCallback((kpi: string) => {
     setActiveLocationKpi(kpi);
     setSelectedDoctorId(null);
     fetchDoctors(currentFilters, kpi, activeSuggestionKpi, 1, false);
-  }, [fetchDoctors, currentFilters, activeSuggestionKpi]);
+    fetchStats(currentFilters, kpi, activeSuggestionKpi);
+  }, [fetchDoctors, fetchStats, currentFilters, activeSuggestionKpi]);
 
   const handleSuggestionKpiClick = useCallback((kpi: string) => {
     setActiveSuggestionKpi(kpi);
     setSelectedDoctorId(null);
     fetchDoctors(currentFilters, activeLocationKpi, kpi, 1, false);
-  }, [fetchDoctors, currentFilters, activeLocationKpi]);
+    fetchStats(currentFilters, activeLocationKpi, kpi);
+  }, [fetchDoctors, fetchStats, currentFilters, activeLocationKpi]);
 
   const handleClearAllKpis = useCallback(() => {
     setActiveLocationKpi('all');
     setActiveSuggestionKpi('all');
     setSelectedDoctorId(null);
     fetchDoctors(currentFilters, 'all', 'all', 1, false);
-  }, [fetchDoctors, currentFilters]);
+    fetchStats(currentFilters, 'all', 'all');
+  }, [fetchDoctors, fetchStats, currentFilters]);
 
   const handleLoadMore = useCallback(() => {
     if (pagination && pagination.page < pagination.totalPages) {
@@ -577,12 +582,12 @@ export default function App() {
               onBack={() => window.history.back()}
               onToast={addToast}
               onSessionExpired={handleSessionExpired}
-              onLocationAdded={() => { fetchStats(currentFilters); }}
+              onLocationAdded={() => { fetchStats(currentFilters, activeLocationKpi, activeSuggestionKpi); }}
               isAdmin={isAdmin}
               onDoctorDeleted={() => {
                 setSelectedDoctorId(null);
                 fetchDoctors(currentFilters, activeLocationKpi, activeSuggestionKpi, 1, false);
-                fetchStats(currentFilters);
+                fetchStats(currentFilters, activeLocationKpi, activeSuggestionKpi);
                 fetchSuggestionCounts();
               }}
             />

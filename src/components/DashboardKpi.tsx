@@ -105,7 +105,7 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
                 <span className={`text-[8px] uppercase tracking-wider font-bold leading-none ${allActive ? 'text-white/80' : 'text-slate-500'}`}>
                     Total Doctors
                 </span>
-                <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${allActive ? 'text-white' : 'text-slate-900'}`}>
+                <div className={`text-base font-medium leading-tight mt-0.5 tracking-tight ${allActive ? 'text-white' : 'text-slate-900'}`}>
                     {stats.totalDoctors.toLocaleString()}
                 </div>
             </div>
@@ -134,7 +134,7 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
                                 <X className="w-2.5 h-2.5 text-white/80" />
                             )}
                         </div>
-                        <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-base font-medium leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                             {item.value.toLocaleString()}
                         </div>
                     </div>
@@ -166,7 +166,7 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
                                 <X className="w-2.5 h-2.5 text-white/80" />
                             )}
                         </div>
-                        <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-base font-medium leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                             {item.value.toLocaleString()}
                         </div>
                     </div>

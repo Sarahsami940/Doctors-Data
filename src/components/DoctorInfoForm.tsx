@@ -32,8 +32,8 @@ export default function DoctorInfoForm({ doctorId, doctor, session, onToast }: P
 
     // Load dropdowns
     useEffect(() => {
-        fetch('/api/dropdown-options').then(r => r.json()).then(data => {
-            setOptions({ speciality: data.speciality || [], designation: data.designation || [], qualification: data.qualification || [] });
+        fetch('/api/filter-options').then(r => r.json()).then(data => {
+            setOptions({ speciality: data.specialities || [], designation: data.designations || [], qualification: data.qualifications || [] });
         }).catch(() => {});
     }, [doctorId]);
 

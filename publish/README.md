@@ -1,4 +1,10 @@
-# Doctor Directory — VM Deployment Guide (IIS)
+# Doctor Directory — Deployment Guide (Phase 1 & 2)
+
+## Admin Password
+Default: **`admin123`**
+To override, set the environment variable `ADMIN_KEY=your_password` before starting.
+
+---
 
 ## Two Deployment Options
 
@@ -9,7 +15,7 @@
 
 ---
 
-## Option A: Direct Node.js (Recommended for quick deployment)
+## Option A: Direct Node.js (Recommended)
 
 ### Prerequisites
 - **Node.js 18+** installed → [nodejs.org](https://nodejs.org)
@@ -22,13 +28,13 @@
    ```powershell
    .\setup.ps1
    ```
-   This seeds the database with 33,000+ doctors from the Excel files.
+   This installs dependencies and seeds the database with doctors, city/brick mappings, and expense cities from the Excel files in the `data\` folder.
 
 3. **Start the server:**
    ```powershell
    .\start.ps1
    ```
-   
+
 4. **Open firewall port:**
    ```powershell
    New-NetFirewallRule -DisplayName "Doctor Directory" -Direction Inbound -Port 3001 -Protocol TCP -Action Allow
@@ -38,146 +44,193 @@
    - Local: `http://localhost:3001`
    - Network: `http://<VM-IP>:3001`
 
-### Run as Background Service (Optional)
-To keep the app running after you close the terminal, use NSSM:
-```powershell
-# Download NSSM from https://nssm.cc/download
-nssm install DoctorDirectory "C:\Program Files\nodejs\node.exe"
-nssm set DoctorDirectory AppParameters "C:\Apps\DoctorDirectory\node_modules\.bin\tsx server\index.ts"
-nssm set DoctorDirectory AppDirectory "C:\Apps\DoctorDirectory"
-nssm set DoctorDirectory AppEnvironmentExtra "PORT=3001"
-nssm start DoctorDirectory
-```
-
 ---
 
 ## Option B: IIS Reverse Proxy
 
-This sets up IIS to reverse-proxy requests to the Node.js server, giving you a standard port 80/443 setup.
-
 ### Prerequisites
-1. **Node.js 18+** installed
-2. **IIS** enabled on the VM
-3. **iisnode** module installed
-4. **URL Rewrite** module installed
+1. Node.js 18+
+2. IIS enabled
+3. iisnode module
+4. URL Rewrite module
 
-### Step 1: Enable IIS
-```powershell
-# Run in PowerShell as Administrator
-Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole, IIS-WebServer, IIS-CommonHttpFeatures, IIS-StaticContent, IIS-DefaultDocument, IIS-HttpErrors, IIS-ApplicationDevelopment, IIS-ISAPIExtensions, IIS-ISAPIFilter, IIS-RequestFiltering -All
-```
-
-### Step 2: Install iisnode
-Download and install from: https://github.com/Azure/iisnode/releases
-- Choose the x64 MSI for your system
-
-### Step 3: Install URL Rewrite Module
-Download from: https://www.iis.net/downloads/microsoft/url-rewrite
-- Install the x64 version
-
-### Step 4: Copy Files
-Copy the `publish` folder contents to:
-```
-C:\inetpub\wwwroot\DoctorDirectory\
-```
-
-### Step 5: Run Setup
-```powershell
-cd C:\inetpub\wwwroot\DoctorDirectory
-.\setup.ps1
-```
-
-### Step 6: Set Folder Permissions
-IIS needs write access for the SQLite database:
-```powershell
-$path = "C:\inetpub\wwwroot\DoctorDirectory"
-$acl = Get-Acl $path
-$rule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-$acl.AddAccessRule($rule)
-Set-Acl $path $acl
-Write-Host "Permissions set"
-```
-
-### Step 7: Create IIS Site
-```powershell
-# Run in PowerShell as Administrator
-Import-Module WebAdministration
-
-# Remove default site if needed
-# Remove-WebSite -Name "Default Web Site"
-
-# Create new site
-New-WebSite -Name "DoctorDirectory" `
-    -Port 80 `
-    -PhysicalPath "C:\inetpub\wwwroot\DoctorDirectory" `
-    -Force
-
-Write-Host "IIS Site created on port 80"
-```
-
-### Step 8: Test
-- Local: `http://localhost`
-- Network: `http://<VM-IP>`
+### Steps
+1. Copy `publish` contents to `C:\inetpub\wwwroot\DoctorDirectory\`
+2. Run `.\setup.ps1`
+3. Set folder permissions for IIS_IUSRS:
+   ```powershell
+   $path = "C:\inetpub\wwwroot\DoctorDirectory"
+   $acl = Get-Acl $path
+   $rule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS","FullControl","ContainerInherit,ObjectInherit","None","Allow")
+   $acl.AddAccessRule($rule)
+   Set-Acl $path $acl
+   ```
+4. Create IIS site pointing to the folder on port 80.
+5. The included `web.config` handles reverse proxy of `/api` to port 3001.
 
 ---
 
-## 🌐 Production Deployment (No Port / SSL)
+## 🗄️ Database: Schema & Migrations
 
-To access your app via `https://your-domain.com` without specifying port 3001, follow these steps:
+### How Schema is Applied
+The schema is **automatically applied** when the server first starts. All tables use `CREATE TABLE IF NOT EXISTS`, so running on an existing database is safe — new tables are added without touching existing data.
 
-### 1. Prerequisites
-- **Node.js 18+** installed.
-- **IIS** enabled.
-- **Application Request Routing (ARR)** installed: [Download here](https://www.iis.net/downloads/microsoft/application-request-routing)
-- **URL Rewrite Module** installed: [Download here](https://www.iis.net/downloads/microsoft/url-rewrite)
+**No manual SQL migration is needed for a fresh install.**
 
-### 2. Enable ARR Proxy (Critical)
-IIS acts as a middleman. You must tell it to "allow proxying":
-1. Open **IIS Manager**.
-2. Click on your **Server Name** in the left panel.
-3. Open **Application Request Routing Cache**.
-4. In the right "Actions" panel, click **Server Proxy Settings**.
-5. Check **Enable proxy** and click **Apply**.
+### Phase 1 & 2 Tables (applied automatically)
+| Table | Purpose |
+|---|---|
+| `doctors` | Master doctor records (seeded from Excel) |
+| `locations` | TSM-added locations per doctor |
+| `user_sessions` | User login sessions |
+| `city_brick_mapping` | DAS city → brick lookup (seeded from Excel) |
+| `cities_expense` | Expense city list (seeded from Excel) |
+| `doctor_suggestions` | TSM-submitted info corrections |
+| `doctors_finalized` | Admin-approved finalized records |
+| `doctor_cnic` | CNIC lock per doctor (first-submit wins) |
+| `pmdc_lookup` | PMDC number → doctor name lookup |
+| `dropdown_options` | Seeded dropdown values |
 
-### 3. Create IIS Site & Bindings
-1. Copy the `publish` folder contents to `C:\inetpub\wwwroot\DoctorDirectory`.
-2. In IIS Manager, right-click "Sites" → **Add Website**.
-   - **Site name**: DoctorDirectory
-   - **Physical path**: C:\inetpub\wwwroot\DoctorDirectory
-   - **Binding**: Type: `http`, Port: `80` (or `https`, Port: `443` if SSL is ready).
-3. **For SSL (HTTPS):**
-   - Click your site "DoctorDirectory".
-   - Click **Bindings...** in the right panel.
-   - Add a new binding: `https`, Port: `443`.
-   - Select your **SSL Certificate** from the dropdown.
+### If Upgrading an Existing Database
+If you have a live database from **before Phase 2** (missing `doctor_suggestions`, `doctors_finalized`, `doctor_cnic`), run this migration script once:
 
-### 4. Background Service (Port 3001)
-Your app still runs internally on port 3001. Use the included `service_installation.js` to keep it running forever:
-1. Open PowerShell as Admin in the app folder.
-2. Run: `node service_installation.js`
+```powershell
+# Open PowerShell in the publish folder
+node -e "
+const Database = require('better-sqlite3');
+const db = new Database('doctor_directory.db');
 
-### 5. Access
-The `web.config` included in the `publish` folder will now automatically:
-- Serve static files (HTML/CSS/JS) directly via IIS.
-- Reverse proxy all `/api` and internal routing to `http://localhost:3001`.
-- Allow you to use the URL **without** the `:3001` suffix.
+db.exec(\`
+  CREATE TABLE IF NOT EXISTS doctor_suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doctor_id INTEGER NOT NULL,
+    session_id INTEGER NOT NULL,
+    employee_name TEXT NOT NULL,
+    suggested_name TEXT,
+    suggested_mobile TEXT,
+    suggested_speciality TEXT,
+    suggested_designation TEXT,
+    suggested_qualification TEXT,
+    suggested_pmdc TEXT,
+    suggested_cnic TEXT,
+    suggest_delete INTEGER DEFAULT 0,
+    delete_reason TEXT,
+    change_reason TEXT,
+    status TEXT DEFAULT 'pending',
+    reviewed_by TEXT,
+    reviewed_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    FOREIGN KEY (session_id) REFERENCES user_sessions(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS doctors_finalized (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_doctor_id INTEGER NOT NULL,
+    doctor_name TEXT NOT NULL,
+    mobile_number TEXT,
+    speciality TEXT,
+    designation TEXT,
+    qualification TEXT,
+    pmdc_number TEXT,
+    pmdc_number_new TEXT,
+    cnic TEXT,
+    is_deleted INTEGER DEFAULT 0,
+    finalized_by TEXT NOT NULL,
+    finalized_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (source_doctor_id) REFERENCES doctors(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS doctor_cnic (
+    doctor_id INTEGER PRIMARY KEY,
+    cnic TEXT NOT NULL,
+    submitted_by_session INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    FOREIGN KEY (submitted_by_session) REFERENCES user_sessions(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_suggestions_doctor ON doctor_suggestions(doctor_id);
+  CREATE INDEX IF NOT EXISTS idx_suggestions_status ON doctor_suggestions(status);
+  CREATE INDEX IF NOT EXISTS idx_finalized_source ON doctors_finalized(source_doctor_id);
+\`);
+
+console.log('Migration complete — Phase 2 tables created');
+db.close();
+"
+```
+
+### Seeding Data from Excel Files
+The `setup.ps1` script runs `node seed.ts` automatically. To re-run seeding manually (e.g. after updating Excel files):
+
+```powershell
+# In the publish folder
+npx tsx server\seed.ts
+```
+
+**What gets seeded:**
+- `data\doctors.xlsx` → `doctors` table (~33,000 records)
+- `data\city_brick_mapping.xlsx` → `city_brick_mapping` table
+- `data\cities_expense.xlsx` → `cities_expense` table
+
+> ⚠️ **Seeding is safe to re-run** — it uses `INSERT OR IGNORE` so existing records are never overwritten or duplicated.
+
+### Database Backup
+```powershell
+Copy-Item "doctor_directory.db" "backup_$(Get-Date -Format 'yyyy-MM-dd_HH-mm').db"
+```
+
+### Verify the database is healthy
+```powershell
+node -e "
+const db = require('better-sqlite3')('doctor_directory.db');
+const tables = db.prepare(\"SELECT name FROM sqlite_master WHERE type='table'\").all();
+console.log('Tables:', tables.map(t => t.name).join(', '));
+const doctorCount = db.prepare('SELECT COUNT(*) as c FROM doctors').get().c;
+console.log('Doctors:', doctorCount);
+db.close();
+"
+```
+
+---
+
+## 🌐 Production Deployment (IIS with ARR — No Port Suffix)
+
+1. Install **Application Request Routing (ARR)**: [Download](https://www.iis.net/downloads/microsoft/application-request-routing)
+2. In IIS Manager → Server → **Application Request Routing Cache** → **Server Proxy Settings** → enable **Enable proxy**
+3. Copy publish folder to `C:\inetpub\wwwroot\DoctorDirectory`
+4. Run `setup.ps1`
+5. Run `node service_installation.js` as Admin to install as a Windows service
+6. The included `web.config` proxies all `/api` traffic to `localhost:3001`
+7. Access via `http://<server-name>` (no port needed)
 
 ---
 
 ## Useful Commands
 
+| Command | Purpose |
+|---|---|
+| `.\start.ps1` | Start the server |
+| `.\start.bat` | Start the server (Windows CMD) |
+| `node service_installation.js` | Install as a Windows service |
+| `node service_uninstall.js` | Remove the Windows service |
+
 ### Data Export
 - **Hidden shortcut:** Click stethoscope logo 5 times → downloads CSV
 - **Direct URL:** `http://<VM-IP>:3001/api/export/locations`
 
-### Database Backup
+### Clear Test/Session Data Only (keep doctors)
 ```powershell
-Copy-Item "doctor_directory.db" "backup_$(Get-Date -Format 'yyyy-MM-dd').db"
-```
-
-### Clear Test Data
-```powershell
-node -e "const db=require('better-sqlite3')('doctor_directory.db'); db.prepare('DELETE FROM locations').run(); db.prepare('DELETE FROM user_sessions').run(); console.log('Data cleared');"
+node -e "
+const db = require('better-sqlite3')('doctor_directory.db');
+db.prepare('DELETE FROM locations').run();
+db.prepare('DELETE FROM user_sessions').run();
+db.prepare('DELETE FROM doctor_suggestions').run();
+db.prepare('DELETE FROM doctors_finalized').run();
+db.prepare('DELETE FROM doctor_cnic').run();
+console.log('User data cleared. Doctor master data preserved.');
+db.close();
+"
 ```
 
 ### Check Server Status
@@ -191,8 +244,9 @@ Invoke-RestMethod "http://localhost:3001/api/doctors?limit=1" | ConvertTo-Json
 
 | Issue | Solution |
 |---|---|
-| **Can't access from network** | Open firewall port: `New-NetFirewallRule -DisplayName "DoctorDir" -Direction Inbound -Port 3001 -Protocol TCP -Action Allow` |
-| **"EADDRINUSE" error** | Another process is using the port. Kill it: `Get-NetTCPConnection -LocalPort 3001 \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }` |
+| **Can't access from network** | `New-NetFirewallRule -DisplayName "DoctorDir" -Direction Inbound -Port 3001 -Protocol TCP -Action Allow` |
+| **"EADDRINUSE" error** | `Get-NetTCPConnection -LocalPort 3001 \| ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }` |
 | **Database locked** | Restart the Node.js server |
 | **iisnode errors** | Check logs in `C:\inetpub\wwwroot\DoctorDirectory\iisnode\` |
-| **Permission denied (IIS)** | Re-run Step 6 (folder permissions) |
+| **Permission denied (IIS)** | Re-run the IIS_IUSRS permission step |
+| **Missing Phase 2 tables** | Run the migration script in the **Upgrading** section above |

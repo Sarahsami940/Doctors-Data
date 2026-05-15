@@ -3,7 +3,7 @@ import { getDb } from '../db';
 
 const router = Router();
 
-const ADMIN_KEY = process.env.ADMIN_KEY || 'atco2024';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'admin123';
 
 // POST /api/admin/auth — validate admin password (BEFORE middleware)
 router.post('/auth', (req: Request, res: Response) => {

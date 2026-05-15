@@ -23,9 +23,9 @@ router.post('/', (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Team is required' });
         }
 
-        const validRoles = ['TSM', 'DSM', 'RSM'];
+        const validRoles = ['TSM', 'DSM', 'RSM', 'Admin'];
         if (!validRoles.includes(role.trim())) {
-            return res.status(400).json({ error: 'Invalid role. Must be TSM, DSM, or RSM.' });
+            return res.status(400).json({ error: 'Invalid role. Must be TSM, DSM, RSM, or Admin.' });
         }
 
         const result = db.prepare(`

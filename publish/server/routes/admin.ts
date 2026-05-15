@@ -3,9 +3,19 @@ import { getDb } from '../db';
 
 const router = Router();
 
-const ADMIN_KEY = process.env.ADMIN_KEY || 'atco2024';
+const ADMIN_KEY = process.env.ADMIN_KEY || 'admin123';
 
-// Middleware: simple secret key check
+// POST /api/admin/auth — validate admin password (BEFORE middleware)
+router.post('/auth', (req: Request, res: Response) => {
+    const { password } = req.body;
+    if (password === ADMIN_KEY) {
+        res.json({ success: true });
+    } else {
+        res.status(403).json({ error: 'Incorrect password' });
+    }
+});
+
+// Middleware: simple secret key check (for all OTHER admin routes)
 router.use((req: Request, res: Response, next) => {
     const key = req.query.key as string;
     if (key !== ADMIN_KEY) {

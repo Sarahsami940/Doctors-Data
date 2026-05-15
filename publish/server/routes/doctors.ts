@@ -22,7 +22,7 @@ router.get('/', (req: Request, res: Response) => {
         const distributor = (req.query.distributor as string || '').trim();
         const search = (req.query.search as string || '').trim();
 
-        let conditions: string[] = [];
+        let conditions: string[] = ['deleted_at IS NULL'];
         let params: any[] = [];
 
         if (search) {
@@ -72,7 +72,7 @@ router.get('/', (req: Request, res: Response) => {
             conditions.push('doctors.id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)');
         }
 
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
         const countQuery = `SELECT COUNT(*) as total FROM doctors ${whereClause}`;
         const total = (db.prepare(countQuery).get(...params) as any).total;

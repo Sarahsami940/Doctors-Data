@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const EXCEL_FILE = path.join(DATA_DIR, 'DoctorsData Application.xlsx');
+const DOCTORS_FILE  = path.join(DATA_DIR, 'DoctorsData Application.xlsx');
+const MAPPINGS_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
 
 function seedDoctors(force: boolean) {
     const db = getDb();
@@ -23,10 +24,15 @@ function seedDoctors(force: boolean) {
         db.exec('DELETE FROM doctors');
     }
 
-    console.log('Reading doctor master data from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['Doctors Master Data'] || workbook.Sheets[workbook.SheetNames[0]];
-    if (!sheet) throw new Error('No valid sheet found in Excel file');
+    console.log('Reading doctor master data from:', DOCTORS_FILE);
+    const workbook = XLSX.readFile(DOCTORS_FILE);
+    // Accept either 'Sheet1' or the legacy 'Doctors Master Data' sheet name
+    const sheetName = workbook.SheetNames.includes('Doctors Master Data')
+        ? 'Doctors Master Data'
+        : workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${DOCTORS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} doctor records`);
@@ -69,11 +75,16 @@ function seedCityBrickMapping(force: boolean) {
         db.exec('DELETE FROM city_brick_mapping');
     }
 
-    const LOCATION_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
-    console.log('Reading city-brick mapping from:', LOCATION_FILE);
-    const workbook = XLSX.readFile(LOCATION_FILE);
-    const sheet = workbook.Sheets['3S Mapping'];
-    if (!sheet) { console.log('Sheet "3S Mapping" not found — skipping.'); return; }
+    console.log('Reading city-brick mapping from:', MAPPINGS_FILE);
+    const workbook = XLSX.readFile(MAPPINGS_FILE);
+    // Accept either '3S Mapping' or legacy 'City-Brick Mapping (for DAS)' sheet
+    const sheetName = workbook.SheetNames.includes('3S Mapping')
+        ? '3S Mapping'
+        : workbook.SheetNames.find(n => n.toLowerCase().includes('city') || n.toLowerCase().includes('brick') || n.toLowerCase().includes('mapping'))
+        || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${MAPPINGS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+    console.log(`Using sheet: ${sheetName}`);
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} city-brick mapping records`);
@@ -110,11 +121,16 @@ function seedCitiesExpense(force: boolean) {
         db.exec('DELETE FROM cities_expense');
     }
 
-    const LOCATION_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
-    console.log('Reading cities for expense from:', LOCATION_FILE);
-    const workbook = XLSX.readFile(LOCATION_FILE);
-    const sheet = workbook.Sheets['Cities for Expense'];
-    if (!sheet) { console.log('Sheet "Cities for Expense" not found — skipping.'); return; }
+    console.log('Reading cities for expense from:', MAPPINGS_FILE);
+    const workbook = XLSX.readFile(MAPPINGS_FILE);
+    // Accept either 'Cities for Expense' sheet
+    const sheetName = workbook.SheetNames.includes('Cities for Expense')
+        ? 'Cities for Expense'
+        : workbook.SheetNames.find(n => n.toLowerCase().includes('expense') || n.toLowerCase().includes('city'))
+        || workbook.SheetNames[workbook.SheetNames.length - 1];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${MAPPINGS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+    console.log(`Using sheet: ${sheetName}`);
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} expense city records`);
@@ -135,96 +151,6 @@ function seedCitiesExpense(force: boolean) {
     console.log(`Seeded expense cities`);
 }
 
-function seedPmdcLookup(force: boolean) {
-    const db = getDb();
-    const PMDC_FILE = path.join(DATA_DIR, 'PMDC Lookup.xlsx');
-
-    const existingCount = db.prepare('SELECT COUNT(*) as c FROM pmdc_lookup').get() as any;
-    if (existingCount.c > 0 && !force) {
-        console.log(`PMDC lookup already has ${existingCount.c} records. Skipping.`);
-        return;
-    }
-
-    if (force) {
-        console.log('Force mode: clearing pmdc_lookup table...');
-        db.exec('DELETE FROM pmdc_lookup');
-    }
-
-    console.log('Reading PMDC lookup from:', PMDC_FILE);
-    const workbook = XLSX.readFile(PMDC_FILE);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    if (!sheet) throw new Error('No sheet found in PMDC Lookup file');
-    const rows = XLSX.utils.sheet_to_json<any>(sheet);
-
-    console.log(`Found ${rows.length} PMDC records`);
-
-    const insert = db.prepare(`INSERT OR IGNORE INTO pmdc_lookup (pmdc_number, doctor_name) VALUES (?, ?)`);
-
-    const insertMany = db.transaction((records: any[]) => {
-        for (const row of records) {
-            const regNo = (row['RegistrationNo'] || '').toString().trim();
-            const name = (row['Name'] || '').toString().trim();
-            if (regNo && name) insert.run(regNo, name);
-        }
-    });
-
-    insertMany(rows);
-    console.log(`Seeded PMDC lookup`);
-}
-
-function seedDropdownOptions(force: boolean) {
-    const db = getDb();
-    const DROPDOWN_FILE = path.join(DATA_DIR, 'Dropdowns.xlsx');
-
-    const existingCount = db.prepare('SELECT COUNT(*) as c FROM dropdown_options').get() as any;
-    if (existingCount.c > 0 && !force) {
-        console.log(`Dropdown options already has ${existingCount.c} records. Skipping.`);
-        return;
-    }
-
-    if (force) {
-        console.log('Force mode: clearing dropdown_options table...');
-        db.exec('DELETE FROM dropdown_options');
-    }
-
-    console.log('Reading dropdown options from:', DROPDOWN_FILE);
-    const workbook = XLSX.readFile(DROPDOWN_FILE);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    if (!sheet) throw new Error('No sheet found in Dropdowns file');
-    const rows = XLSX.utils.sheet_to_json<any>(sheet, { header: 1 });
-
-    const headers = rows[0] as string[];
-    const dataRows = rows.slice(1);
-
-    const insert = db.prepare(`INSERT OR IGNORE INTO dropdown_options (category, value) VALUES (?, ?)`);
-
-    const insertMany = db.transaction(() => {
-        for (const row of dataRows) {
-            for (let i = 0; i < headers.length; i++) {
-                const category = (headers[i] || '').trim().toLowerCase();
-                const value = ((row as any[])[i] || '').toString().trim();
-                if (category && value) {
-                    insert.run(category, value);
-                }
-            }
-        }
-    });
-
-    insertMany();
-
-    // Add values that exist in doctor data but may be missing from Excel
-    const extras = [
-        ['designation', 'Family Physician'],
-        ['qualification', 'MATRIC'],
-    ];
-    for (const [cat, val] of extras) {
-        insert.run(cat, val);
-    }
-
-    const finalCount = db.prepare('SELECT COUNT(*) as c FROM dropdown_options').get() as any;
-    console.log(`Seeded ${finalCount.c} dropdown options`);
-}
-
 function main() {
     const force = process.argv.includes('--force');
     console.log(`Starting database seed...${force ? ' (FORCE MODE — will replace existing data)' : ''}\n`);
@@ -234,10 +160,6 @@ function main() {
         seedCityBrickMapping(force);
         console.log('');
         seedCitiesExpense(force);
-        console.log('');
-        seedPmdcLookup(force);
-        console.log('');
-        seedDropdownOptions(force);
         console.log('\nSeed completed successfully!');
     } catch (error) {
         console.error('Seed failed:', error);
@@ -248,4 +170,3 @@ function main() {
 }
 
 main();
-

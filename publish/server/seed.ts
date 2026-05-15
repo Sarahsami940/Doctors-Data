@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const EXCEL_FILE = path.join(DATA_DIR, 'DoctorsData Application.xlsx');
+const DOCTORS_FILE  = path.join(DATA_DIR, 'DoctorsData Application.xlsx');
+const MAPPINGS_FILE = path.join(DATA_DIR, 'Location form mappings.xlsx');
 
 function seedDoctors(force: boolean) {
     const db = getDb();
@@ -23,10 +24,15 @@ function seedDoctors(force: boolean) {
         db.exec('DELETE FROM doctors');
     }
 
-    console.log('Reading doctor master data from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['Doctors Master Data'];
-    if (!sheet) throw new Error('Sheet "Doctors Master Data" not found in Excel file');
+    console.log('Reading doctor master data from:', DOCTORS_FILE);
+    const workbook = XLSX.readFile(DOCTORS_FILE);
+    // Accept either 'Sheet1' or the legacy 'Doctors Master Data' sheet name
+    const sheetName = workbook.SheetNames.includes('Doctors Master Data')
+        ? 'Doctors Master Data'
+        : workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${DOCTORS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} doctor records`);
@@ -69,10 +75,16 @@ function seedCityBrickMapping(force: boolean) {
         db.exec('DELETE FROM city_brick_mapping');
     }
 
-    console.log('Reading city-brick mapping from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['City-Brick Mapping (for DAS)'];
-    if (!sheet) throw new Error('Sheet "City-Brick Mapping (for DAS)" not found in Excel file');
+    console.log('Reading city-brick mapping from:', MAPPINGS_FILE);
+    const workbook = XLSX.readFile(MAPPINGS_FILE);
+    // Accept either '3S Mapping' or legacy 'City-Brick Mapping (for DAS)' sheet
+    const sheetName = workbook.SheetNames.includes('3S Mapping')
+        ? '3S Mapping'
+        : workbook.SheetNames.find(n => n.toLowerCase().includes('city') || n.toLowerCase().includes('brick') || n.toLowerCase().includes('mapping'))
+        || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${MAPPINGS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+    console.log(`Using sheet: ${sheetName}`);
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} city-brick mapping records`);
@@ -109,10 +121,16 @@ function seedCitiesExpense(force: boolean) {
         db.exec('DELETE FROM cities_expense');
     }
 
-    console.log('Reading cities for expense from:', EXCEL_FILE);
-    const workbook = XLSX.readFile(EXCEL_FILE);
-    const sheet = workbook.Sheets['Cities for Expense'];
-    if (!sheet) throw new Error('Sheet "Cities for Expense" not found in Excel file');
+    console.log('Reading cities for expense from:', MAPPINGS_FILE);
+    const workbook = XLSX.readFile(MAPPINGS_FILE);
+    // Accept either 'Cities for Expense' sheet
+    const sheetName = workbook.SheetNames.includes('Cities for Expense')
+        ? 'Cities for Expense'
+        : workbook.SheetNames.find(n => n.toLowerCase().includes('expense') || n.toLowerCase().includes('city'))
+        || workbook.SheetNames[workbook.SheetNames.length - 1];
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) throw new Error(`No usable sheet found in ${MAPPINGS_FILE}. Sheets: ${workbook.SheetNames.join(', ')}`);
+    console.log(`Using sheet: ${sheetName}`);
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     console.log(`Found ${rows.length} expense city records`);

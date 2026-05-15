@@ -374,8 +374,8 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                 )}
 
                 {doctor.locations && doctor.locations.length > 0 ? (
-                    <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
+                    <div className="border border-slate-200 rounded-xl shadow-sm">
+                        <div className="relative">
                             <table className="min-w-full divide-y divide-slate-200 text-left">
                                 <thead className="bg-slate-50">
                                     <tr>

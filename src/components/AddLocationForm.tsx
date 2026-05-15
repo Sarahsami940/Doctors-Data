@@ -180,7 +180,7 @@ export default function AddLocationForm({ doctorId, sessionId, onLocationAdded, 
                         />
                         {showExpenseCityDropdown && filteredExpenseCities.length > 0 && (
                             <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                {filteredExpenseCities.slice(0, 100).map(city => (
+                                {filteredExpenseCities.map(city => (
                                     <button
                                         key={city}
                                         type="button"

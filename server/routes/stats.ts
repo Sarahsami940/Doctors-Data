@@ -16,11 +16,14 @@ router.get('/', (req: Request, res: Response) => {
         const distributor = (req.query.distributor as string || '').trim();
         const search = (req.query.search as string || '').trim();
 
-        let conditions: string[] = ['deleted_at IS NULL'];
+        const kpi_location = String(req.query.kpi_location || '').trim();
+        const kpi_suggestion = String(req.query.kpi_suggestion || '').trim();
+
+        let baseConditions: string[] = ['deleted_at IS NULL'];
         let params: any[] = [];
 
         if (search) {
-            conditions.push(`(
+            baseConditions.push(`(
                 doctor_name LIKE ? OR
                 speciality LIKE ? OR
                 qualification LIKE ? OR
@@ -32,40 +35,56 @@ router.get('/', (req: Request, res: Response) => {
             const searchTerm = `%${search}%`;
             params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
         }
-        if (name) { conditions.push('doctor_name LIKE ?'); params.push(`%${name}%`); }
-        if (speciality) { conditions.push('speciality LIKE ?'); params.push(`%${speciality}%`); }
-        if (qualification) { conditions.push('qualification LIKE ?'); params.push(`%${qualification}%`); }
-        if (designation) { conditions.push('designation LIKE ?'); params.push(`%${designation}%`); }
-        if (city_das) { conditions.push('doctor_city_das LIKE ?'); params.push(`%${city_das}%`); }
-        if (distributor) { conditions.push('distributor_name = ?'); params.push(distributor); }
+        if (name) { baseConditions.push('doctor_name LIKE ?'); params.push(`%${name}%`); }
+        if (speciality) { baseConditions.push('speciality LIKE ?'); params.push(`%${speciality}%`); }
+        if (qualification) { baseConditions.push('qualification LIKE ?'); params.push(`%${qualification}%`); }
+        if (designation) { baseConditions.push('designation LIKE ?'); params.push(`%${designation}%`); }
+        if (city_das) { baseConditions.push('doctor_city_das LIKE ?'); params.push(`%${city_das}%`); }
+        if (distributor) { baseConditions.push('distributor_name = ?'); params.push(distributor); }
 
-        const whereClause = `WHERE ${conditions.join(' AND ')}`;
+        let locCondition = '';
+        if (kpi_location === 'no-locations') locCondition = 'id NOT IN (SELECT DISTINCT doctor_id FROM locations)';
+        else if (kpi_location === 'single-location') locCondition = 'id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) = 1)';
+        else if (kpi_location === 'multi-locations') locCondition = 'id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)';
 
-        const totalDoctors = (db.prepare(`SELECT COUNT(*) as count FROM doctors ${whereClause}`).get(...params) as { count: number }).count;
+        let suggCondition = '';
+        if (kpi_suggestion === 'no-suggestions') suggCondition = 'id NOT IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)';
+        else if (kpi_suggestion === 'with-suggestions') suggCondition = 'id IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)';
+
+        const buildWhere = (extraConditions: string[]) => {
+            const all = [...baseConditions, ...extraConditions].filter(c => c !== '');
+            return all.length ? `WHERE ${all.join(' AND ')}` : '';
+        };
+
+        const totalWhere = buildWhere([locCondition, suggCondition]);
+        const locStatsWhere = buildWhere([suggCondition]);
+        const suggStatsWhere = buildWhere([locCondition]);
+
+        const totalDoctors = (db.prepare(`SELECT COUNT(*) as count FROM doctors ${totalWhere}`).get(...params) as { count: number }).count;
 
         const noLocations = (db.prepare(`
             SELECT COUNT(*) as count FROM doctors 
-            ${whereClause ? whereClause + ' AND' : 'WHERE'} id NOT IN (SELECT DISTINCT doctor_id FROM locations)
+            ${locStatsWhere ? locStatsWhere + ' AND' : 'WHERE'} id NOT IN (SELECT DISTINCT doctor_id FROM locations)
         `).get(...params) as { count: number }).count;
 
         const singleLocation = (db.prepare(`
             SELECT COUNT(*) as count FROM doctors
-            ${whereClause ? whereClause + ' AND' : 'WHERE'} id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) = 1)
+            ${locStatsWhere ? locStatsWhere + ' AND' : 'WHERE'} id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) = 1)
         `).get(...params) as { count: number }).count;
 
         const multipleLocations = (db.prepare(`
             SELECT COUNT(*) as count FROM doctors
-            ${whereClause ? whereClause + ' AND' : 'WHERE'} id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)
+            ${locStatsWhere ? locStatsWhere + ' AND' : 'WHERE'} id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)
         `).get(...params) as { count: number }).count;
 
         const noSuggestions = (db.prepare(`
             SELECT COUNT(*) as count FROM doctors
-            ${whereClause ? whereClause + ' AND' : 'WHERE'} id NOT IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
+            ${suggStatsWhere ? suggStatsWhere + ' AND' : 'WHERE'} id NOT IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
         `).get(...params) as { count: number }).count;
 
         const withSuggestions = (db.prepare(`
             SELECT COUNT(*) as count FROM doctors
-            ${whereClause ? whereClause + ' AND' : 'WHERE'} id IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
+            ${suggStatsWhere ? suggStatsWhere + ' AND' : 'WHERE'} id IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
         `).get(...params) as { count: number }).count;
 
         res.json({

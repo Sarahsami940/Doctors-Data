@@ -144,7 +144,11 @@ export default function AdminEditForm({ suggestion, onUpdate, onFinalize, onToas
                     className="flex items-center gap-1.5 text-xs px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-all disabled:opacity-50">
                     {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Update
                 </button>
-                <button onClick={onFinalize}
+                <button onClick={() => {
+                    if (window.confirm("Are you sure you want to finalize this suggestion? It cannot be changed later.")) {
+                        onFinalize();
+                    }
+                }}
                     className="flex items-center gap-1.5 text-xs px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all">
                     <CheckCircle className="w-3 h-3" /> Finalize
                 </button>

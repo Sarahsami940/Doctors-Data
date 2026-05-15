@@ -95,17 +95,17 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
             {/* Total Doctors */}
             <div
                 onClick={onClearAll}
-                className={`col-span-2 px-2.5 py-1.5 rounded-lg border flex flex-col justify-center gap-0 transition-all relative cursor-pointer
+                className={`px-2 py-1.5 rounded-lg border flex flex-col justify-center gap-0 transition-all relative cursor-pointer
                     ${allActive
-                        ? 'bg-blue-600 border-blue-700 text-white shadow-md ring-1 ring-offset-1 ring-blue-400 z-10'
+                        ? 'bg-blue-600 border-blue-700 text-white shadow-md z-10 scale-[1.02]'
                         : 'bg-blue-50 border-blue-100 hover:bg-blue-100 text-slate-900 hover:shadow-sm'
                     }
                 `}
             >
-                <span className={`text-[9px] uppercase tracking-wider font-bold leading-tight ${allActive ? 'text-white/80' : 'text-slate-500'}`}>
+                <span className={`text-[8px] uppercase tracking-wider font-bold leading-none ${allActive ? 'text-white/80' : 'text-slate-500'}`}>
                     Total Doctors
                 </span>
-                <div className={`text-[15px] font-black leading-tight ${allActive ? 'text-white' : 'text-slate-900'}`}>
+                <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${allActive ? 'text-white' : 'text-slate-900'}`}>
                     {stats.totalDoctors.toLocaleString()}
                 </div>
             </div>
@@ -134,7 +134,7 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
                                 <X className="w-2.5 h-2.5 text-white/80" />
                             )}
                         </div>
-                        <div className={`text-sm font-black leading-tight mt-0.5 ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                             {item.value.toLocaleString()}
                         </div>
                     </div>
@@ -166,7 +166,7 @@ export default function DashboardKpi({ stats, isLoading, activeLocationKpi, acti
                                 <X className="w-2.5 h-2.5 text-white/80" />
                             )}
                         </div>
-                        <div className={`text-sm font-black leading-tight mt-0.5 ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        <div className={`text-sm font-mono font-black leading-tight mt-0.5 tracking-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                             {item.value.toLocaleString()}
                         </div>
                     </div>

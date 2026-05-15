@@ -85,9 +85,12 @@ export default function DoctorList({
                     <div className="w-12 shrink-0 text-center">#</div>
                     <div className="flex-1">Name</div>
                     {isAdmin ? (
-                        <div className="hidden sm:block w-32 text-center">Status</div>
+                        <>
+                            <div className="hidden sm:block w-20 text-center">Locations</div>
+                            <div className="hidden sm:block w-32 text-center">Status</div>
+                        </>
                     ) : (
-                        <div className="hidden sm:block w-28 text-center">Designation</div>
+                        <div className="hidden sm:block w-20 text-center">Locations</div>
                     )}
                     <div className="w-5 shrink-0"></div>
                 </div>
@@ -116,36 +119,45 @@ export default function DoctorList({
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                     <p className="text-sm font-medium text-slate-900 truncate">{doctor.doctor_name}</p>
-                                    {doctor.location_count > 0 && (
-                                        <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0">
-                                            <MapPin className="w-2.5 h-2.5" />
-                                            {doctor.location_count}
-                                        </span>
-                                    )}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
                                     {doctor.doctor_city_das}{doctor.mobile_number ? ` · ${doctor.mobile_number}` : ''}
                                 </p>
                             </div>
                             {isAdmin ? (
-                                <div className="hidden sm:flex flex-col items-center justify-center gap-1 w-32 shrink-0">
-                                    {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
-                                        <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
-                                            {suggestionCounts[doctor.id]} Suggestion{suggestionCounts[doctor.id] > 1 ? 's' : ''}
-                                        </span>
-                                    )}
-                                    {finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
-                                        <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 tracking-wide">
-                                            ✓ Finalized
-                                        </span>
-                                    )}
-                                    {(!suggestionCounts || !suggestionCounts[doctor.id]) && (!finalizedDoctorIds || !finalizedDoctorIds.has(doctor.id)) && (
-                                        <span className="text-[10px] text-slate-300">—</span>
-                                    )}
-                                </div>
+                                <>
+                                    <div className="hidden sm:flex items-center justify-center w-20 shrink-0">
+                                        {doctor.location_count > 0 ? (
+                                            <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                                                <MapPin className="w-2.5 h-2.5" />
+                                                {doctor.location_count}
+                                            </span>
+                                        ) : <span className="text-[10px] text-slate-300">—</span>}
+                                    </div>
+                                    <div className="hidden sm:flex flex-col items-center justify-center gap-1 w-32 shrink-0">
+                                        {suggestionCounts && suggestionCounts[doctor.id] > 0 && (
+                                            <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
+                                                {suggestionCounts[doctor.id]} Suggestion{suggestionCounts[doctor.id] > 1 ? 's' : ''}
+                                            </span>
+                                        )}
+                                        {finalizedDoctorIds && finalizedDoctorIds.has(doctor.id) && (
+                                            <span className="inline-flex items-center text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 tracking-wide">
+                                                ✓ Finalized
+                                            </span>
+                                        )}
+                                        {(!suggestionCounts || !suggestionCounts[doctor.id]) && (!finalizedDoctorIds || !finalizedDoctorIds.has(doctor.id)) && (
+                                            <span className="text-[10px] text-slate-300">—</span>
+                                        )}
+                                    </div>
+                                </>
                             ) : (
-                                <div className="hidden sm:block w-28 text-center shrink-0">
-                                    <span className="text-xs text-slate-500 truncate block">{doctor.designation || '—'}</span>
+                                <div className="hidden sm:flex items-center justify-center w-20 shrink-0">
+                                    {doctor.location_count > 0 ? (
+                                        <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                                            <MapPin className="w-2.5 h-2.5" />
+                                            {doctor.location_count}
+                                        </span>
+                                    ) : <span className="text-[10px] text-slate-300">—</span>}
                                 </div>
                             )}
                             <ChevronRight className={`w-5 h-5 shrink-0 text-slate-300 transition-colors ${selectedDoctorId === doctor.id ? (isAdmin ? 'text-amber-500' : 'text-indigo-500') : 'group-hover:text-slate-400'

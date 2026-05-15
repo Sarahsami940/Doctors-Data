@@ -58,11 +58,23 @@ router.get('/', (req: Request, res: Response) => {
             ${whereClause ? whereClause + ' AND' : 'WHERE'} id IN (SELECT doctor_id FROM locations GROUP BY doctor_id HAVING COUNT(*) > 1)
         `).get(...params) as { count: number }).count;
 
+        const noSuggestions = (db.prepare(`
+            SELECT COUNT(*) as count FROM doctors
+            ${whereClause ? whereClause + ' AND' : 'WHERE'} id NOT IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
+        `).get(...params) as { count: number }).count;
+
+        const withSuggestions = (db.prepare(`
+            SELECT COUNT(*) as count FROM doctors
+            ${whereClause ? whereClause + ' AND' : 'WHERE'} id IN (SELECT DISTINCT doctor_id FROM doctor_suggestions)
+        `).get(...params) as { count: number }).count;
+
         res.json({
             totalDoctors,
             noLocations,
             singleLocation,
-            multipleLocations
+            multipleLocations,
+            noSuggestions,
+            withSuggestions
         });
     } catch (error: any) {
         console.error('Error fetching stats:', error);

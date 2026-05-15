@@ -128,7 +128,8 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>(emptyFilters);
-  const [activeKpiFilter, setActiveKpiFilter] = useState<string>('all');
+  const [activeLocationKpi, setActiveLocationKpi] = useState<string>('all');
+  const [activeSuggestionKpi, setActiveSuggestionKpi] = useState<string>('all');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [adminAppView, setAdminAppView] = useState(false); // Admin viewing as normal app
   const [suggestionCounts, setSuggestionCounts] = useState<Record<number, number>>({});
@@ -219,7 +220,7 @@ export default function App() {
   }, [session]);
 
   // Fetch doctors
-  const fetchDoctors = useCallback(async (filters: SearchFilters, kpi: string, page: number = 1, append: boolean = false) => {
+  const fetchDoctors = useCallback(async (filters: SearchFilters, locKpi: string, suggKpi: string, page: number = 1, append: boolean = false) => {
     if (page === 1) {
       setIsLoading(true);
       setIsSearching(true);
@@ -239,7 +240,8 @@ export default function App() {
       if (filters.designation) params.set('designation', filters.designation);
       if (filters.city_das) params.set('city_das', filters.city_das);
       if (filters.distributor) params.set('distributor', filters.distributor);
-      if (kpi && kpi !== 'all') params.set('kpi', kpi);
+      if (locKpi && locKpi !== 'all') params.set('kpi_location', locKpi);
+      if (suggKpi && suggKpi !== 'all') params.set('kpi_suggestion', suggKpi);
 
       const res = await fetch(`/api/doctors?${params}`);
       const data = await res.json();
@@ -285,7 +287,7 @@ export default function App() {
 
   // Initial load
   useEffect(() => {
-    fetchDoctors(emptyFilters, 'all');
+    fetchDoctors(emptyFilters, 'all', 'all');
     fetchStats();
   }, [fetchDoctors, fetchStats]);
 
@@ -299,21 +301,34 @@ export default function App() {
   const handleSearch = useCallback((filters: SearchFilters) => {
     setCurrentFilters(filters);
     setSelectedDoctorId(null);
-    fetchDoctors(filters, activeKpiFilter, 1, false);
+    fetchDoctors(filters, activeLocationKpi, activeSuggestionKpi, 1, false);
     fetchStats(filters);
-  }, [fetchDoctors, fetchStats, activeKpiFilter]);
+  }, [fetchDoctors, fetchStats, activeLocationKpi, activeSuggestionKpi]);
 
-  const handleKpiClick = useCallback((kpi: string) => {
-    setActiveKpiFilter(kpi);
+  const handleLocationKpiClick = useCallback((kpi: string) => {
+    setActiveLocationKpi(kpi);
     setSelectedDoctorId(null);
-    fetchDoctors(currentFilters, kpi, 1, false);
+    fetchDoctors(currentFilters, kpi, activeSuggestionKpi, 1, false);
+  }, [fetchDoctors, currentFilters, activeSuggestionKpi]);
+
+  const handleSuggestionKpiClick = useCallback((kpi: string) => {
+    setActiveSuggestionKpi(kpi);
+    setSelectedDoctorId(null);
+    fetchDoctors(currentFilters, activeLocationKpi, kpi, 1, false);
+  }, [fetchDoctors, currentFilters, activeLocationKpi]);
+
+  const handleClearAllKpis = useCallback(() => {
+    setActiveLocationKpi('all');
+    setActiveSuggestionKpi('all');
+    setSelectedDoctorId(null);
+    fetchDoctors(currentFilters, 'all', 'all', 1, false);
   }, [fetchDoctors, currentFilters]);
 
   const handleLoadMore = useCallback(() => {
     if (pagination && pagination.page < pagination.totalPages) {
-      fetchDoctors(currentFilters, activeKpiFilter, pagination.page + 1, true);
+      fetchDoctors(currentFilters, activeLocationKpi, activeSuggestionKpi, pagination.page + 1, true);
     }
-  }, [pagination, currentFilters, activeKpiFilter, fetchDoctors]);
+  }, [pagination, currentFilters, activeLocationKpi, activeSuggestionKpi, fetchDoctors]);
 
   const handleSelectDoctor = useCallback((id: number) => {
     setSelectedDoctorId(id);
@@ -401,13 +416,21 @@ export default function App() {
               <div className="flex-1 min-w-0">
                 <AdvancedSearch onSearch={handleSearch} isSearching={isSearching} />
               </div>
-              <div className="hidden lg:block w-[200px] shrink-0 [&>div]:h-full">
-                <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+              <div className="hidden lg:block w-[240px] shrink-0 [&>div]:h-full">
+                <DashboardKpi
+                    stats={stats} isLoading={isStatsLoading}
+                    activeLocationKpi={activeLocationKpi} activeSuggestionKpi={activeSuggestionKpi}
+                    onLocationKpiClick={handleLocationKpiClick} onSuggestionKpiClick={handleSuggestionKpiClick} onClearAll={handleClearAllKpis}
+                />
               </div>
             </div>
             {/* KPI tiles below on smaller screens */}
             <div className="lg:hidden">
-              <DashboardKpi stats={stats} isLoading={isStatsLoading} activeKpi={activeKpiFilter} onKpiClick={handleKpiClick} />
+                <DashboardKpi
+                    stats={stats} isLoading={isStatsLoading}
+                    activeLocationKpi={activeLocationKpi} activeSuggestionKpi={activeSuggestionKpi}
+                    onLocationKpiClick={handleLocationKpiClick} onSuggestionKpiClick={handleSuggestionKpiClick} onClearAll={handleClearAllKpis}
+                />
             </div>
 
             {/* Admin: View Switcher + Filter */}
@@ -558,7 +581,7 @@ export default function App() {
               isAdmin={isAdmin}
               onDoctorDeleted={() => {
                 setSelectedDoctorId(null);
-                fetchDoctors(currentFilters, activeKpiFilter, 1, false);
+                fetchDoctors(currentFilters, activeLocationKpi, activeSuggestionKpi, 1, false);
                 fetchStats(currentFilters);
                 fetchSuggestionCounts();
               }}

@@ -65,6 +65,8 @@ export type DashboardStats = {
     noLocations: number;
     singleLocation: number;
     multipleLocations: number;
+    noSuggestions: number;
+    withSuggestions: number;
 };
 
 export const TEAMS = [

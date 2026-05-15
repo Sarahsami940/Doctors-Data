@@ -182,8 +182,8 @@ export default function AdvancedSearch({ onSearch, isSearching }: AdvancedSearch
                         onFocus={() => setShowCityDasDropdown(true)}
                         onBlur={() => setTimeout(() => setShowCityDasDropdown(false), 200)}
                         className="w-full pl-2 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-600"
-                        placeholder="City for DAS"
-                        title="City for DAS"
+                        placeholder="City"
+                        title="City"
                     />
                     {showCityDasDropdown && filteredCitiesDas.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DoctorDetail as DoctorDetailType, LocationRecord, UserSession, DoctorSuggestion } from '../types';
-import { MapPin, Plus, User, ArrowLeft, MapPinned, Loader2, FileText, Check, X, Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Plus, User, ArrowLeft, MapPinned, Loader2, FileText, Check, X, Pencil, Trash2, Save } from 'lucide-react';
 import AddLocationForm from './AddLocationForm';
 import DoctorInfoForm from './DoctorInfoForm';
 import AdminEditForm from './AdminEditForm';
@@ -16,6 +16,14 @@ type DoctorDetailProps = {
     onDoctorDeleted?: () => void;
 };
 
+type EditingLocation = {
+    id: number;
+    city_expense: string;
+    city_das: string;
+    brick_das: string;
+    location_name: string;
+};
+
 export default function DoctorDetail({ doctorId, session, onBack, onToast, onSessionExpired, onLocationAdded, isAdmin, onDoctorDeleted }: DoctorDetailProps) {
     const [doctor, setDoctor] = useState<DoctorDetailType | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +31,21 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
     const [suggestions, setSuggestions] = useState<DoctorSuggestion[]>([]);
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
     const [editingSuggestion, setEditingSuggestion] = useState<DoctorSuggestion | null>(null);
+
+    // Location inline edit state
+    const [editingLocation, setEditingLocation] = useState<EditingLocation | null>(null);
+    const [locDeleteConfirm, setLocDeleteConfirm] = useState<number | null>(null);
+    const [locSaving, setLocSaving] = useState(false);
+    const [locDeleting, setLocDeleting] = useState<number | null>(null);
+    const [expenseCities, setExpenseCities] = useState<string[]>([]);
+    const [dasCities, setDasCities] = useState<string[]>([]);
+    const [bricks, setBricks] = useState<string[]>([]);
+    const [locExpCitySearch, setLocExpCitySearch] = useState('');
+    const [locDasCitySearch, setLocDasCitySearch] = useState('');
+    const [locBrickSearch, setLocBrickSearch] = useState('');
+    const [showLocExpCity, setShowLocExpCity] = useState(false);
+    const [showLocDasCity, setShowLocDasCity] = useState(false);
+    const [showLocBrick, setShowLocBrick] = useState(false);
 
     const fetchDoctor = async () => {
         try {
@@ -51,6 +74,62 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
         fetchDoctor();
         fetchSuggestions();
     }, [doctorId]);
+
+    // Load dropdown data for location editor (admin only)
+    useEffect(() => {
+        if (!isAdmin) return;
+        fetch('/api/cities-expense').then(r => r.json()).then((d: any[]) => setExpenseCities(d.map((x: any) => x.city_name))).catch(() => {});
+        fetch('/api/cities').then(r => r.json()).then((d: any[]) => setDasCities(d.map((x: any) => x.city_name))).catch(() => {});
+    }, [isAdmin]);
+
+    // Reload bricks when editing DAS city changes
+    useEffect(() => {
+        if (!editingLocation?.city_das) { setBricks([]); return; }
+        fetch(`/api/bricks?cityName=${encodeURIComponent(editingLocation.city_das)}`)
+            .then(r => r.json()).then((d: any[]) => setBricks(d.map((x: any) => x.brick_name))).catch(() => {});
+    }, [editingLocation?.city_das]);
+
+    const startEditLocation = (loc: LocationRecord) => {
+        setEditingLocation({ id: loc.id, city_expense: loc.city_expense, city_das: loc.city_das, brick_das: loc.brick_das, location_name: loc.location_name || '' });
+        setLocExpCitySearch(loc.city_expense);
+        setLocDasCitySearch(loc.city_das);
+        setLocBrickSearch(loc.brick_das);
+        setLocDeleteConfirm(null);
+    };
+
+    const cancelEditLocation = () => { setEditingLocation(null); setLocDeleteConfirm(null); };
+
+    const handleLocationUpdate = async () => {
+        if (!editingLocation) return;
+        if (!editingLocation.city_expense.trim()) { onToast('error', 'City is required'); return; }
+        if (!editingLocation.city_das.trim() || !editingLocation.brick_das.trim()) { onToast('error', 'Distributor City and Brick are required'); return; }
+        setLocSaving(true);
+        try {
+            const res = await fetch(`/api/locations/${editingLocation.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingLocation)
+            });
+            const data = await res.json();
+            if (!res.ok) { onToast('error', data.error || 'Failed to update'); return; }
+            setDoctor(prev => prev ? { ...prev, locations: prev.locations?.map(l => l.id === editingLocation.id ? data.location : l) } : prev);
+            onToast('success', 'Location updated');
+            setEditingLocation(null);
+        } catch { onToast('error', 'Network error'); } finally { setLocSaving(false); }
+    };
+
+    const handleLocationDelete = async (locId: number) => {
+        setLocDeleting(locId);
+        try {
+            const res = await fetch(`/api/locations/${locId}`, { method: 'DELETE' });
+            if (!res.ok) { const d = await res.json(); onToast('error', d.error || 'Failed to delete'); return; }
+            setDoctor(prev => prev ? { ...prev, locations: prev.locations?.filter(l => l.id !== locId), location_count: (prev.location_count || 1) - 1 } : prev);
+            onToast('success', 'Location deleted');
+            if (editingLocation?.id === locId) setEditingLocation(null);
+            setLocDeleteConfirm(null);
+            if (onLocationAdded) onLocationAdded();
+        } catch { onToast('error', 'Network error'); } finally { setLocDeleting(null); }
+    };
 
     const handleLocationAdded = (newLocation: LocationRecord) => {
         setDoctor(prev => prev ? {
@@ -300,23 +379,103 @@ export default function DoctorDetail({ doctorId, session, onBack, onToast, onSes
                             <table className="min-w-full divide-y divide-slate-200 text-left">
                                 <thead className="bg-slate-50">
                                     <tr>
-                                        <th className="px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">City (Expense)</th>
-                                        <th className="px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">City (DAS)</th>
-                                        <th className="px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Brick (DAS)</th>
-                                        <th className="px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-                                        <th className="hidden sm:table-cell px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Added By</th>
+                                        <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">City</th>
+                                        <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Distributor City</th>
+                                        <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Brick</th>
+                                        <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
+                                        <th className="hidden sm:table-cell px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Added By</th>
+                                        {isAdmin && <th className="px-3 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
-                                    {doctor.locations.map(loc => (
-                                        <tr key={loc.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-slate-700">{loc.city_expense}</td>
-                                            <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-slate-700">{loc.city_das}</td>
-                                            <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-slate-700">{loc.brick_das}</td>
-                                            <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-slate-500">{loc.location_name || '—'}</td>
-                                            <td className="hidden sm:table-cell px-4 sm:px-5 py-3.5 whitespace-nowrap text-xs text-slate-400">{loc.added_by_name || '—'}</td>
-                                        </tr>
-                                    ))}
+                                    {doctor.locations.map(loc => {
+                                        const isEditing = editingLocation?.id === loc.id;
+                                        const isDelConfirm = locDeleteConfirm === loc.id;
+                                        const inCls = "w-full px-2 py-1 text-xs border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white";
+                                        return (
+                                            <tr key={loc.id} className={`transition-colors ${isEditing ? 'bg-amber-50/70 ring-1 ring-inset ring-amber-300' : 'hover:bg-slate-50/50'}`}>
+                                                <td className="px-3 py-2.5 text-sm text-slate-700 min-w-[130px]">
+                                                    {isEditing ? (
+                                                        <div className="relative">
+                                                            <input value={locExpCitySearch} onChange={e => { setLocExpCitySearch(e.target.value); setShowLocExpCity(true); setEditingLocation(prev => prev ? { ...prev, city_expense: e.target.value } : prev); }} onFocus={() => setShowLocExpCity(true)} onBlur={() => setTimeout(() => setShowLocExpCity(false), 200)} className={inCls} placeholder="City..." />
+                                                            {showLocExpCity && expenseCities.filter(c => c.toLowerCase().includes(locExpCitySearch.toLowerCase())).length > 0 && (
+                                                                <div className="absolute z-30 w-full mt-0.5 bg-white border border-slate-200 rounded shadow-lg max-h-36 overflow-y-auto">
+                                                                    {expenseCities.filter(c => c.toLowerCase().includes(locExpCitySearch.toLowerCase())).slice(0, 50).map(c => (
+                                                                        <button key={c} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setEditingLocation(prev => prev ? { ...prev, city_expense: c } : prev); setLocExpCitySearch(c); setShowLocExpCity(false); }} className={`w-full text-left px-2 py-1.5 text-xs hover:bg-amber-50 ${editingLocation?.city_expense === c ? 'font-medium text-amber-700' : ''}`}>{c}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : loc.city_expense}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-sm text-slate-700 min-w-[130px]">
+                                                    {isEditing ? (
+                                                        <div className="relative">
+                                                            <input value={locDasCitySearch} onChange={e => { setLocDasCitySearch(e.target.value); setShowLocDasCity(true); setEditingLocation(prev => prev ? { ...prev, city_das: e.target.value, brick_das: '' } : prev); setLocBrickSearch(''); }} onFocus={() => setShowLocDasCity(true)} onBlur={() => setTimeout(() => setShowLocDasCity(false), 200)} className={inCls} placeholder="Distributor city..." />
+                                                            {showLocDasCity && dasCities.filter(c => c.toLowerCase().includes(locDasCitySearch.toLowerCase())).length > 0 && (
+                                                                <div className="absolute z-30 w-full mt-0.5 bg-white border border-slate-200 rounded shadow-lg max-h-36 overflow-y-auto">
+                                                                    {dasCities.filter(c => c.toLowerCase().includes(locDasCitySearch.toLowerCase())).slice(0, 50).map(c => (
+                                                                        <button key={c} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setEditingLocation(prev => prev ? { ...prev, city_das: c, brick_das: '' } : prev); setLocDasCitySearch(c); setLocBrickSearch(''); setShowLocDasCity(false); }} className={`w-full text-left px-2 py-1.5 text-xs hover:bg-amber-50 ${editingLocation?.city_das === c ? 'font-medium text-amber-700' : ''}`}>{c}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : loc.city_das}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-sm text-slate-700 min-w-[130px]">
+                                                    {isEditing ? (
+                                                        <div className="relative">
+                                                            <input value={locBrickSearch} disabled={!editingLocation?.city_das} onChange={e => { setLocBrickSearch(e.target.value); setShowLocBrick(true); setEditingLocation(prev => prev ? { ...prev, brick_das: e.target.value } : prev); }} onFocus={() => setShowLocBrick(true)} onBlur={() => setTimeout(() => setShowLocBrick(false), 200)} className={`${inCls} disabled:opacity-50 disabled:cursor-not-allowed`} placeholder={editingLocation?.city_das ? 'Brick...' : 'Select city first'} />
+                                                            {showLocBrick && bricks.filter(b => b.toLowerCase().includes(locBrickSearch.toLowerCase())).length > 0 && (
+                                                                <div className="absolute z-30 w-full mt-0.5 bg-white border border-slate-200 rounded shadow-lg max-h-36 overflow-y-auto">
+                                                                    {bricks.filter(b => b.toLowerCase().includes(locBrickSearch.toLowerCase())).slice(0, 50).map(b => (
+                                                                        <button key={b} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setEditingLocation(prev => prev ? { ...prev, brick_das: b } : prev); setLocBrickSearch(b); setShowLocBrick(false); }} className={`w-full text-left px-2 py-1.5 text-xs hover:bg-amber-50 ${editingLocation?.brick_das === b ? 'font-medium text-amber-700' : ''}`}>{b}</button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : loc.brick_das}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-sm text-slate-500 min-w-[100px]">
+                                                    {isEditing ? (
+                                                        <input value={editingLocation?.location_name || ''} onChange={e => setEditingLocation(prev => prev ? { ...prev, location_name: e.target.value } : prev)} className={inCls} placeholder="e.g. Hospital" />
+                                                    ) : (loc.location_name || '—')}
+                                                </td>
+                                                <td className="hidden sm:table-cell px-3 py-2.5 text-xs text-slate-400 whitespace-nowrap">{loc.added_by_name || '—'}</td>
+                                                {isAdmin && (
+                                                    <td className="px-3 py-2 whitespace-nowrap">
+                                                        {isEditing ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <button onClick={handleLocationUpdate} disabled={locSaving} className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded font-medium hover:bg-green-200 disabled:opacity-50 transition-all">
+                                                                    {locSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                                                                </button>
+                                                                <button onClick={cancelEditLocation} className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded font-medium hover:bg-slate-200 transition-all">
+                                                                    <X className="w-3 h-3" /> Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : isDelConfirm ? (
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-red-600 font-medium mr-0.5">Delete?</span>
+                                                                <button onClick={() => handleLocationDelete(loc.id)} disabled={locDeleting === loc.id} className="text-[10px] px-2 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700 disabled:opacity-50">
+                                                                    {locDeleting === loc.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Yes'}
+                                                                </button>
+                                                                <button onClick={() => setLocDeleteConfirm(null)} className="text-[10px] px-2 py-1 bg-white text-slate-600 rounded border font-medium hover:bg-slate-50">No</button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1">
+                                                                <button onClick={() => startEditLocation(loc)} className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-amber-100 text-amber-700 rounded font-medium hover:bg-amber-200 transition-all">
+                                                                    <Pencil className="w-3 h-3" /> Edit
+                                                                </button>
+                                                                <button onClick={() => setLocDeleteConfirm(loc.id)} className="flex items-center gap-0.5 text-[10px] px-2 py-1 bg-red-50 text-red-600 rounded font-medium hover:bg-red-100 transition-all">
+                                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

@@ -106,4 +106,73 @@ router.post('/doctors/:id/locations', (req: Request, res: Response) => {
     }
 });
 
+// PATCH /api/locations/:id - Update a location (admin only)
+router.patch('/locations/:id', (req: Request, res: Response) => {
+    try {
+        const db = getDb();
+        const locationId = parseInt(req.params.id);
+        const { city_expense, city_das, brick_das, location_name } = req.body;
+
+        if (!city_expense) return res.status(400).json({ error: 'City is required' });
+        if (!city_das || !brick_das) return res.status(400).json({ error: 'Distributor City and Brick are required' });
+
+        const existing = db.prepare('SELECT * FROM locations WHERE id = ?').get(locationId) as any;
+        if (!existing) return res.status(404).json({ error: 'Location not found' });
+
+        const clean = (v: string | null | undefined) =>
+            (v || '').trim().replace(/[,]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+        // Check for duplicate among other records for same doctor
+        const normCE = normalizeText(city_expense);
+        const normCD = normalizeText(city_das);
+        const normBD = normalizeText(brick_das);
+        const normLN = normalizeText(location_name);
+
+        const dup = db.prepare(`
+            SELECT id FROM locations
+            WHERE doctor_id = ? AND id != ?
+            AND LOWER(TRIM(city_expense)) = ?
+            AND LOWER(TRIM(city_das)) = ?
+            AND LOWER(TRIM(brick_das)) = ?
+            AND LOWER(TRIM(COALESCE(location_name, ''))) = ?
+        `).get(existing.doctor_id, locationId, normCE, normCD, normBD, normLN);
+
+        if (dup) return res.status(409).json({ error: 'A duplicate location already exists for this doctor' });
+
+        db.prepare(`
+            UPDATE locations SET city_expense = ?, city_das = ?, brick_das = ?, location_name = ?
+            WHERE id = ?
+        `).run(clean(city_expense), clean(city_das), clean(brick_das), clean(location_name) || null, locationId);
+
+        const updated = db.prepare(`
+            SELECT l.*, us.name as added_by_name, us.employee_code as added_by_code
+            FROM locations l
+            LEFT JOIN user_sessions us ON l.session_id = us.id
+            WHERE l.id = ?
+        `).get(locationId);
+
+        res.json({ message: 'Location updated', location: updated });
+    } catch (error: any) {
+        console.error('Error updating location:', error);
+        res.status(500).json({ error: 'Failed to update location' });
+    }
+});
+
+// DELETE /api/locations/:id - Delete a location (admin only)
+router.delete('/locations/:id', (req: Request, res: Response) => {
+    try {
+        const db = getDb();
+        const locationId = parseInt(req.params.id);
+
+        const existing = db.prepare('SELECT id FROM locations WHERE id = ?').get(locationId);
+        if (!existing) return res.status(404).json({ error: 'Location not found' });
+
+        db.prepare('DELETE FROM locations WHERE id = ?').run(locationId);
+        res.json({ message: 'Location deleted' });
+    } catch (error: any) {
+        console.error('Error deleting location:', error);
+        res.status(500).json({ error: 'Failed to delete location' });
+    }
+});
+
 export default router;
